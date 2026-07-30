@@ -30,22 +30,27 @@ numerically before use (section 3a of the notebook) rather than judged by eye.
 | Hint | Source pose | Validation |
 |---|---|---|
 | `pose_01.png` | seated on a stool, front on, one leg extended to the floor, the other knee raised, both arms hanging clear of the torso | 18/18 keypoints, all four limb chains closed, no limb crossings |
-| `pose_02.png` | standing, arms folded across the chest, feet wide apart | 18/18 keypoints, all chains closed; the two forearms cross in 2D |
+| `pose_02.png` | standing, both forearms raised with closed fists at chest height, feet wide apart | 18/18 keypoints, all four limb chains closed, no limb crossings |
 
-The pair was chosen deliberately. `pose_01` is the clean case: nothing overlaps, so the hint is
-unambiguous. `pose_02` keeps one known difficulty - crossed forearms - because a 2D skeleton carries
-no depth and cannot say which forearm is in front. The legs, however, are wide apart and completely
-unambiguous, so the difficulty is confined to the arms.
+The pair maximises pose contrast while keeping both hints unambiguous. They differ in the upper body
+(arms hanging versus both forearms raised) *and* the lower body (seated with asymmetric legs versus
+standing with the feet apart), so experiment B varies posture as completely as two references can
+while every limb chain stays closed and no limb overlaps another in 2D.
 
-Three candidate references were rejected by the same numeric check and are kept out of the run:
+`pose_02`'s closed fists are a deliberate choice. Fingers were the one defect no setting in this
+notebook fixed, and a closed fist is a shape SDXL renders far more reliably than a spread hand, so
+this reference sidesteps the known failure rather than walking into it.
+
+Six candidates were checked; four were rejected by the same numeric test and kept out of the run:
 
 | Rejected | Why |
 |---|---|
-| profile shot, seated on a block | 15/18 - the left arm was hidden inside a coat, so its chain never closed |
+| seated profile in a coat | 15/18 - the left arm was hidden behind the torso, so its chain never closed |
 | upper-body crop | 12/18 - no leg keypoints at all |
-| crouch, arms around the shins | left ankle lost, and both legs crossed in 2D |
+| crouch, arms around the shins | left ankle lost, both legs crossed in 2D |
+| three standing shots with folded arms | complete chains, but the forearms crossed in 2D - usable, simply worse than the pair above |
 
-Rejecting references on a keypoint count rather than on appearance is the point of section 3a: an
+Rejecting a reference on a keypoint count rather than on appearance is the point of section 3a. An
 unclosed limb chain silently disables pose control for that limb, and the generated image gives no
 warning that it happened.
 

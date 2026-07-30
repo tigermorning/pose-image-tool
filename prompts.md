@@ -10,10 +10,10 @@ Every generation in `pose_tool.ipynb` is recorded here so any result can be repr
 | ControlNet | `thibaud/controlnet-openpose-sdxl-1.0` |
 | VAE | `madebyollin/sdxl-vae-fp16-fix` |
 | Pose annotator | `controlnet_aux.OpenposeDetector` (`lllyasviel/Annotators`), body + hands, no face |
-| Resolution | 832 x 1216 (hint and output identical) |
+| Resolution | 832 x 1216, references letterboxed (not cropped) to that ratio |
 | Steps | 28 |
-| Guidance scale | 6.0 |
-| Conditioning scale | 0.8 |
+| Guidance scale | 5.0 |
+| Conditioning scale | 0.9 |
 | Precision | fp16 |
 
 Negative prompt, used for every image:
@@ -30,11 +30,13 @@ is what produces doubled limbs - see the prompt-writing notes at the bottom.
 
 | Hint | Source pose | Detection quality |
 |---|---|---|
-| `pose_01.png` | seated on a low block, one hand to the head, one leg extended | clean - all four limbs traced to the extremities |
-| `pose_02.png` | crouching, arms wrapped around the shins | poor - heavy self-occlusion, limb assignment tangles |
+| `pose_01.png` | seated on a low block, one hand to the head, one leg extended | 18/18 keypoints, all limb chains closed |
+| `pose_02.png` | crouching, arms wrapped around the shins | 18/18 once letterboxed; 17/18 when centre-cropped |
 
-`pose_02` was kept deliberately. It is the concrete evidence behind limitation 1 (pose detection
-is the ceiling) rather than an assumed failure mode.
+`pose_02` initially lost its left ankle and with it all pose control over that leg. The cause was
+not the crouch: `ImageOps.fit` was centre-cropping the reference to the target aspect ratio and
+cutting the ankle out of frame. Letterboxing recovers the full 18 keypoints. Framing the
+reference is part of the pipeline, not preprocessing housekeeping.
 
 ## Experiment A - same pose, different prompts
 

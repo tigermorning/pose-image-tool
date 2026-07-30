@@ -88,7 +88,7 @@ The zip also contains the experiment images under their own names (`exp_a_*`, `e
 | Prompt ignored | raise `guidance_scale`, or lower `conditioning_scale` |
 | Doubled limbs | remove posture words that *contradict* the hint; words that agree with it ("seated" over a seated skeleton) are harmless |
 | CUDA OOM on a T4 | replace `pipe.to('cuda')` with `pipe.enable_model_cpu_offload()` |
-| `controlnet_aux` import error | use section 3b's MediaPipe fallback extractor |
+| `AttributeError: module 'mediapipe' has no attribute 'solutions'` | `!pip uninstall -y mediapipe`, restart the runtime. controlnet_aux imports mediapipe at package level and breaks against Colab's build; it does not need it |
 | Black or NaN images | the fp16-fix VAE was skipped; the stock SDXL VAE overflows in fp16 |
 
 ## Test results
@@ -101,7 +101,7 @@ A 16 GB T4 on the full-GPU path runs roughly 40-60 s per image.
 | Experiment | Held fixed | Varied | Result |
 |---|---|---|---|
 | **A** same pose, different prompts | `pose_01`, seed 1234, 28 steps, guidance 6.0, conditioning 0.8 | African woman in a bohemian dress on neon-lit wet asphalt / Middle Eastern warrior in neon armour in a laundromat | The skeleton held across both: raised hand at the head, elbow angle, braced second hand, raised knee, extended leg, head tilt, and the figure's position and scale in frame. Subject, wardrobe, setting, palette and lighting changed freely. |
-| **B** same prompt, different poses | neon-armour warrior prompt, seed 777, all sampler settings | `pose_01` (18/18 keypoints) / `pose_02` (17/18, left ankle missing) | Identity carried across both. `B1` reproduced the seated leaning pose. `B2` lost it: the crouch became a generic symmetric seated figure and the crop tightened from full-body to waist-up. |
+| **B** same prompt, different poses | neon-armour warrior prompt, seed 777, all sampler settings | `pose_01` / `pose_02`, two clearly different seated poses | Identity carried across both. `B1` reproduced the seated leaning pose. `B2` lost it: the crouch became a generic symmetric seated figure and the crop tightened from full-body to waist-up. |
 
 **The skeleton owns where the body is, the prompt owns what the body is.** A and B are the two
 halves of that claim.
@@ -130,7 +130,7 @@ but stiffens the armour into flat plate and makes the raised hand worse. 0.8 sta
 
 | Measure | Result |
 |---|---|
-| Pose hints passing numeric validation | 1 of 2 references (`pose_02` loses the left ankle) |
+| Pose hints passing numeric validation | 2 of 2 once letterboxed; 1 of 2 when centre-cropped |
 | Images reproducing the reference pose | `A1`, `A2`, `B1` yes; `B2` no |
 | Images with malformed raised hands | all of them, at both conditioning scales |
 
@@ -147,8 +147,10 @@ Observed in this run, not assumed.
 2. **Detection failure is silent.** `pose_02` produced a confident-looking but wrong skeleton; the
    only downstream symptom was a pose that ignored the reference. Section 3b turns that into a
    number - run it every time.
-3. **Self-occlusion is the trigger for detection failure.** Both references were seated; the one
-   where the arms wrap across the shins is the one that lost a keypoint.
+3. **How the reference is framed is part of the pipeline.** `pose_02` lost its left ankle, and
+   with it all pose control over that leg, because `ImageOps.fit` centre-cropped the reference
+   to the target aspect ratio and cut the ankle out of frame. Letterboxing recovers all 18
+   keypoints. The crouch was never the problem.
 4. **The hint is 2D.** No depth is encoded, so overlapping limbs cannot be disambiguated - the
    mechanism behind both failures above. Facing direction has to be stated in the prompt.
 5. **Hands are the most reliable defect.** Fingers merged on every raised hand in every image,

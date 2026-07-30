@@ -58,32 +58,36 @@ warning that it happened.
 
 Pose hint, seed and all sampler settings fixed. Only the prompt changes.
 
-| ID | Pose | Seed | Output file |
-|---|---|---|---|
-| A1 | `pose_01.png` | 1234 | `exp_a_1.png` (also copied to `output_01.png`) |
-| A2 | `pose_01.png` | 1234 | `exp_a_2.png` |
+| ID | Pose | Seed | Tests | Output file |
+|---|---|---|---|---|
+| A1 | `pose_01.png` | 1234 | a different person in the reference's pose | `exp_a_1.png` (also copied to `output_01.png`) |
+| A2 | `pose_01.png` | 1234 | a different subject **and** a different medium | `exp_a_2.png` |
 
-A1 - the assignment's step 1, a different person in the reference's pose:
-
-```
-A beautiful funky African woman wearing a flowing bohemian dress, under the night sky, wet asphalt reflecting colourful neon lights, cinematic lighting, professional photography, ultra-realistic, highly detailed face
-```
-
-A2 - the prompt variation:
+A1 - the assignment's step 1:
 
 ```
-A Middle Eastern warrior clad in glowing neon armour, sitting in a futuristic laundromat, studio lighting, ultra-realistic, highly detailed
+A young African woman with short natural hair, wearing a tailored ivory linen suit, in a sunlit concrete gallery with tall windows, warm daylight from the left, 85mm lens, shallow depth of field
 ```
 
-The reference is a seated man. A1 asks for a standing-neutral description of an African woman and
-nothing about posture, so whatever pose survives comes from the skeleton alone - which is exactly
-what step 1 is meant to demonstrate. A2 then changes subject, wardrobe, setting and lighting while
-the hint stays fixed.
+A2 - the harder variation:
 
-A1 carries **no posture words at all**. That is deliberate: the identical text is reused in
-experiment B over a standing hint, and a posture word that contradicts the hint produces doubled
-limbs. A2 says "sitting", which agrees with `pose_01` and is therefore harmless - it is never used
-over the standing hint.
+```
+An ink and watercolour drawing of a travelling puppeteer in patched wool, on cream paper with visible fibres, loose brush strokes, muted earth pigments
+```
+
+The two prompts probe different axes. A1 stays photographic and changes who the person is. A2 leaves
+photography altogether, and moving away from photorealism is where pose adherence weakens first at a
+given conditioning scale - so A2 is the informative case for "which change does the tool follow less
+well".
+
+Neither prompt contains a posture word. The skeleton supplies posture; a prompt that contradicts it
+produces doubled limbs. A1 in particular is reused verbatim over a standing hint in experiment B, so
+it has to stay posture-neutral.
+
+Both prompts also avoid stacked quality boilerplate. `85mm lens` and `warm daylight from the left`
+are concrete and get rendered; `professional photography` and `ultra-realistic` compete for the same
+attention and add little. The same logic decides the scene: `sunlit concrete gallery with tall
+windows` is made of things the model can draw, where an abstract noun on its own tends to be ignored.
 
 ## Experiment B - same prompt, different poses
 
@@ -91,7 +95,7 @@ Prompt, seed and all sampler settings fixed. Only the pose hint changes. The pro
 so this is the assignment's step 2: the same words, a different pose photo.
 
 ```
-A beautiful funky African woman wearing a flowing bohemian dress, under the night sky, wet asphalt reflecting colourful neon lights, cinematic lighting, professional photography, ultra-realistic, highly detailed face
+A young African woman with short natural hair, wearing a tailored ivory linen suit, in a sunlit concrete gallery with tall windows, warm daylight from the left, 85mm lens, shallow depth of field
 ```
 
 | ID | Pose | Seed | Output file |
@@ -99,9 +103,9 @@ A beautiful funky African woman wearing a flowing bohemian dress, under the nigh
 | B1 | `pose_01.png` - seated on a stool | 777 | `exp_b_01.png` |
 | B2 | `pose_02.png` - standing, fists raised | 777 | `exp_b_02.png` (also copied to `output_02.png`) |
 
-Between them, `output_01.png` and `output_02.png` are the two halves of the assignment: the same
-prompt and the same seed produced a seated figure and a standing one, and the only thing that
-differed was which photograph the skeleton came from.
+`output_01.png` and `output_02.png` are the two halves of the assignment. Same prompt, same seed, one
+seated woman and one standing woman - and the only thing that differed was which photograph the
+skeleton came from.
 
 ## Prompt-writing notes
 

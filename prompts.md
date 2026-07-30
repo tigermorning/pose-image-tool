@@ -13,7 +13,7 @@ Every generation in `pose_tool.ipynb` is recorded here so any result can be repr
 | Resolution | 832 x 1216 (hint and output identical) |
 | Steps | 28 |
 | Guidance scale | 6.0 |
-| Conditioning scale | 0.8 (except experiment C) |
+| Conditioning scale | 0.8 |
 | Precision | fp16 |
 
 Negative prompt, used for every image:
@@ -22,64 +22,71 @@ Negative prompt, used for every image:
 lowres, blurry, deformed hands, extra limbs, extra fingers, watermark, text, jpeg artifacts
 ```
 
+## Pose hints
+
+Both references are seated figures, which is why the prompts below may say "seated" or "sitting":
+a posture word that *agrees* with the skeleton is harmless. A posture word that *contradicts* it
+is what produces doubled limbs - see the prompt-writing notes at the bottom.
+
+| Hint | Source pose | Detection quality |
+|---|---|---|
+| `pose_01.png` | seated on a low block, one hand to the head, one leg extended | clean - all four limbs traced to the extremities |
+| `pose_02.png` | crouching, arms wrapped around the shins | poor - heavy self-occlusion, limb assignment tangles |
+
+`pose_02` was kept deliberately. It is the concrete evidence behind limitation 1 (pose detection
+is the ceiling) rather than an assumed failure mode.
+
 ## Experiment A - same pose, different prompts
 
 Pose hint, seed and all sampler settings fixed. Only the prompt changes.
 
-| ID | Pose | Seed | Prompt | Output file |
-|---|---|---|---|---|
-| A1 | `pose_01.png` | 1234 | `a professional astronaut in a white spacesuit on red martian soil, cinematic lighting, photorealistic` | `exp_a_1.png` (also copied to `output_01.png`) |
-| A2 | `pose_01.png` | 1234 | `a medieval knight in polished steel armour in a stone castle courtyard, overcast light, photorealistic` | `exp_a_2.png` |
-| A3 | `pose_01.png` | 1234 | `a watercolour illustration of a ballet dancer, soft pastel palette, visible paper texture` | `exp_a_3.png` |
+| ID | Pose | Seed | Output file |
+|---|---|---|---|
+| A1 | `pose_01.png` | 1234 | `exp_a_1.png` (also copied to `output_01.png`) |
+| A2 | `pose_01.png` | 1234 | `exp_a_2.png` |
 
-Prompt selection is deliberate: A1 and A2 change the **subject** while keeping photorealism, A3 changes the **medium**. That separates "does the pose survive a new subject" from "does the pose survive a new style".
+A1:
+
+```
+A beautiful funky African woman wearing a flowing bohemian dress, seated in a chic pose, under the night sky, wet asphalt reflecting colourful neon lights, cinematic lighting, professional photography, ultra-realistic, highly detailed face
+```
+
+A2:
+
+```
+A Middle Eastern warrior clad in glowing neon armour, sitting in a futuristic laundromat, studio lighting, ultra-realistic, highly detailed
+```
+
+The pair differs in subject, wardrobe, setting **and** lighting (night neon on wet asphalt versus
+flat interior studio light), while both stay photorealistic. That isolates subject-and-scene
+variation from style variation.
 
 ## Experiment B - same prompt, different poses
 
 Prompt, seed and all sampler settings fixed. Only the pose hint changes.
 
-Prompt:
+Prompt (same text as A2):
 
 ```
-a fashion model in a long charcoal wool coat in an empty concrete studio, dramatic side light, photorealistic
+A Middle Eastern warrior clad in glowing neon armour, sitting in a futuristic laundromat, studio lighting, ultra-realistic, highly detailed
 ```
 
 | ID | Pose | Seed | Output file |
 |---|---|---|---|
 | B1 | `pose_01.png` | 777 | `exp_b_01.png` |
 | B2 | `pose_02.png` | 777 | `exp_b_02.png` (also copied to `output_02.png`) |
-| B3 | `pose_03.png` (if a third reference was uploaded) | 777 | `exp_b_03.png` |
 
-The prompt is intentionally pose-neutral - it names no posture - so that any posture in the output comes from the hint alone.
-
-## Experiment C - conditioning scale sweep
-
-Pose hint, prompt and seed fixed. Only `controlnet_conditioning_scale` changes.
-
-Prompt:
-
-```
-a mountaineer in technical outdoor gear, granite rock face behind, midday sun, photorealistic
-```
-
-| ID | Pose | Seed | Conditioning scale | Output file |
-|---|---|---|---|---|
-| C1 | `pose_01.png` | 42 | 0.4 | `exp_c_scale_0.4.png` |
-| C2 | `pose_01.png` | 42 | 0.7 | `exp_c_scale_0.7.png` |
-| C3 | `pose_01.png` | 42 | 1.0 | `exp_c_scale_1.0.png` |
-
-## Smoke test
-
-Run once before the experiments to verify the pipeline end to end. Not part of the results.
-
-```
-a hiker in a red windbreaker on a mountain ridge, golden hour, photorealistic
-```
-Pose `pose_01.png`, seed 1234, defaults everywhere else.
+B1 uses the clean hint and B2 the tangled one, so this experiment measures two things at once:
+what the pose hint controls, and what happens when the hint itself is unreliable.
 
 ## Prompt-writing notes
 
-- **Do not describe the pose in the prompt.** The skeleton already supplies it. Words like "arms raised" fight the hint and produce doubled limbs.
-- **Do describe subject, wardrobe, setting, lighting and medium.** Those are exactly the dimensions the skeleton leaves free.
-- **Non-photorealistic styles need a higher conditioning scale** (roughly +0.1-0.2) to hold the same pose.
-- Keep the negative prompt identical across a comparison, otherwise it stops being a single-variable experiment.
+- **Do not describe a posture that fights the hint.** The skeleton already supplies the pose.
+  "arms raised" over a seated skeleton produces doubled limbs. A posture word that matches the
+  skeleton (here, "seated" / "sitting") is fine and can even help.
+- **Do describe subject, wardrobe, setting, lighting and medium.** Those are exactly the
+  dimensions the skeleton leaves free.
+- **Non-photorealistic styles need a higher conditioning scale** (roughly +0.1-0.2) to hold the
+  same pose. Both prompts here are photorealistic, so the 0.8 default is used throughout.
+- Keep the negative prompt identical across a comparison, otherwise it stops being a
+  single-variable experiment.

@@ -66,13 +66,13 @@ Pose hint, seed and all sampler settings fixed. Only the prompt changes.
 A1 - the assignment's step 1:
 
 ```
-A young African woman with short natural hair, wearing a tailored ivory linen suit, in a sunlit concrete gallery with tall windows, warm daylight from the left, 85mm lens, shallow depth of field
+A young African woman, short natural hair, small gold hoop earrings, wearing a tailored ivory linen suit with rolled sleeves, in a sunlit concrete gallery with tall arched windows and a polished terrazzo floor, warm late-afternoon light raking from the left, 85mm lens at f/2, editorial fashion photograph, fine skin texture
 ```
 
 A2 - the harder variation:
 
 ```
-An ink and watercolour drawing of a travelling puppeteer in patched wool, on cream paper with visible fibres, loose brush strokes, muted earth pigments
+An ink and watercolour drawing of a travelling puppeteer in a patched wool coat and worn leather boots, a canvas satchel at the hip, on cream paper with visible fibres, loose confident brush strokes, muted earth pigments of ochre and burnt umber, ink bleeding at the outlines, wide untouched margins
 ```
 
 The two prompts probe different axes. A1 stays photographic and changes who the person is. A2 leaves
@@ -84,10 +84,23 @@ Neither prompt contains a posture word. The skeleton supplies posture; a prompt 
 produces doubled limbs. A1 in particular is reused verbatim over a standing hint in experiment B, so
 it has to stay posture-neutral.
 
-Both prompts also avoid stacked quality boilerplate. `85mm lens` and `warm daylight from the left`
-are concrete and get rendered; `professional photography` and `ultra-realistic` compete for the same
-attention and add little. The same logic decides the scene: `sunlit concrete gallery with tall
-windows` is made of things the model can draw, where an abstract noun on its own tends to be ignored.
+Both prompts spend their tokens on things the model can draw. `85mm lens at f/2`,
+`warm late-afternoon light raking from the left` and `polished terrazzo floor` are concrete;
+`professional photography` and `ultra-realistic` are not, and were dropped. This follows the one
+thing measured on the earlier prompt pair: `wet asphalt reflecting colourful neon lights` (6 tokens,
+a material plus an optical effect) was rendered faithfully, while `futuristic laundromat` (3 tokens,
+an abstract noun) was ignored almost entirely. Concreteness decided it, not length.
+
+### The 77-token ceiling is real
+
+Each SDXL text encoder truncates at 77 tokens and `diffusers` does it silently. A first draft of A1
+ran to 84 tokens, which would have dropped `85mm lens at f/2`, `editorial fashion photograph` and
+`fine skin texture` - the last clauses, and three of the most useful. It was trimmed to 71 by
+removing `in her late twenties` (redundant next to "young") and a second garment layer.
+
+Current counts: **A1 71/77, A2 65/77, negative prompt 35/77.** Check any edit against the tokenizer
+before running it; a prompt that silently loses its tail is indistinguishable from a prompt that was
+simply ignored.
 
 ## Experiment B - same prompt, different poses
 
@@ -95,7 +108,7 @@ Prompt, seed and all sampler settings fixed. Only the pose hint changes. The pro
 so this is the assignment's step 2: the same words, a different pose photo.
 
 ```
-A young African woman with short natural hair, wearing a tailored ivory linen suit, in a sunlit concrete gallery with tall windows, warm daylight from the left, 85mm lens, shallow depth of field
+A young African woman, short natural hair, small gold hoop earrings, wearing a tailored ivory linen suit with rolled sleeves, in a sunlit concrete gallery with tall arched windows and a polished terrazzo floor, warm late-afternoon light raking from the left, 85mm lens at f/2, editorial fashion photograph, fine skin texture
 ```
 
 | ID | Pose | Seed | Output file |

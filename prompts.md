@@ -24,19 +24,30 @@ lowres, blurry, deformed hands, extra limbs, extra fingers, watermark, text, jpe
 
 ## Pose hints
 
-Both references are seated figures, which is why the prompts below may say "seated" or "sitting":
-a posture word that *agrees* with the skeleton is harmless. A posture word that *contradicts* it
-is what produces doubled limbs - see the prompt-writing notes at the bottom.
+Both references are single-subject full-body photographs, letterboxed to 832x1216. Each was checked
+numerically before use (section 3a of the notebook) rather than judged by eye.
 
-| Hint | Source pose | Detection quality |
+| Hint | Source pose | Validation |
 |---|---|---|
-| `pose_01.png` | seated on a low block, one hand to the head, one leg extended | 18/18 keypoints, all limb chains closed |
-| `pose_02.png` | crouching, arms wrapped around the shins | 18/18 once letterboxed; 17/18 when centre-cropped |
+| `pose_01.png` | seated on a stool, front on, one leg extended to the floor, the other knee raised, both arms hanging clear of the torso | 18/18 keypoints, all four limb chains closed, no limb crossings |
+| `pose_02.png` | standing, arms folded across the chest, feet wide apart | 18/18 keypoints, all chains closed; the two forearms cross in 2D |
 
-`pose_02` initially lost its left ankle and with it all pose control over that leg. The cause was
-not the crouch: `ImageOps.fit` was centre-cropping the reference to the target aspect ratio and
-cutting the ankle out of frame. Letterboxing recovers the full 18 keypoints. Framing the
-reference is part of the pipeline, not preprocessing housekeeping.
+The pair was chosen deliberately. `pose_01` is the clean case: nothing overlaps, so the hint is
+unambiguous. `pose_02` keeps one known difficulty - crossed forearms - because a 2D skeleton carries
+no depth and cannot say which forearm is in front. The legs, however, are wide apart and completely
+unambiguous, so the difficulty is confined to the arms.
+
+Three candidate references were rejected by the same numeric check and are kept out of the run:
+
+| Rejected | Why |
+|---|---|
+| profile shot, seated on a block | 15/18 - the left arm was hidden inside a coat, so its chain never closed |
+| upper-body crop | 12/18 - no leg keypoints at all |
+| crouch, arms around the shins | left ankle lost, and both legs crossed in 2D |
+
+Rejecting references on a keypoint count rather than on appearance is the point of section 3a: an
+unclosed limb chain silently disables pose control for that limb, and the generated image gives no
+warning that it happened.
 
 ## Experiment A - same pose, different prompts
 

@@ -93,6 +93,8 @@ The zip also contains the experiment images under their own names (`exp_a_*`, `e
 
 ## Test results
 
+> The numbers below were measured on an earlier pair of references (a crouch and a profile shot) that failed the section 3a keypoint check. The reference pair has since been replaced with two that pass it cleanly, and this section is regenerated from that run. The methodology and the conclusions about hint construction, framing and conditioning scale carry over unchanged.
+
 Two experiments, each isolating one variable. Full prompts and seeds in [`prompts.md`](prompts.md).
 Measured on an 8 GB RTX 3060 Ti (`enable_model_cpu_offload()`, fp16, torch 2.6.0+cu124,
 diffusers 0.39.0): 5.4 s per pose extraction, 435-553 s per generated image (mean 506 s).

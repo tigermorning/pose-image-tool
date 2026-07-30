@@ -63,39 +63,45 @@ Pose hint, seed and all sampler settings fixed. Only the prompt changes.
 | A1 | `pose_01.png` | 1234 | `exp_a_1.png` (also copied to `output_01.png`) |
 | A2 | `pose_01.png` | 1234 | `exp_a_2.png` |
 
-A1:
+A1 - the assignment's step 1, a different person in the reference's pose:
 
 ```
-A beautiful funky African woman wearing a flowing bohemian dress, seated in a chic pose, under the night sky, wet asphalt reflecting colourful neon lights, cinematic lighting, professional photography, ultra-realistic, highly detailed face
+A beautiful funky African woman wearing a flowing bohemian dress, under the night sky, wet asphalt reflecting colourful neon lights, cinematic lighting, professional photography, ultra-realistic, highly detailed face
 ```
 
-A2:
+A2 - the prompt variation:
 
 ```
 A Middle Eastern warrior clad in glowing neon armour, sitting in a futuristic laundromat, studio lighting, ultra-realistic, highly detailed
 ```
 
-The pair differs in subject, wardrobe, setting **and** lighting (night neon on wet asphalt versus
-flat interior studio light), while both stay photorealistic. That isolates subject-and-scene
-variation from style variation.
+The reference is a seated man. A1 asks for a standing-neutral description of an African woman and
+nothing about posture, so whatever pose survives comes from the skeleton alone - which is exactly
+what step 1 is meant to demonstrate. A2 then changes subject, wardrobe, setting and lighting while
+the hint stays fixed.
+
+A1 carries **no posture words at all**. That is deliberate: the identical text is reused in
+experiment B over a standing hint, and a posture word that contradicts the hint produces doubled
+limbs. A2 says "sitting", which agrees with `pose_01` and is therefore harmless - it is never used
+over the standing hint.
 
 ## Experiment B - same prompt, different poses
 
-Prompt, seed and all sampler settings fixed. Only the pose hint changes.
-
-Prompt (same text as A2):
+Prompt, seed and all sampler settings fixed. Only the pose hint changes. The prompt is A1 verbatim,
+so this is the assignment's step 2: the same words, a different pose photo.
 
 ```
-A Middle Eastern warrior clad in glowing neon armour, sitting in a futuristic laundromat, studio lighting, ultra-realistic, highly detailed
+A beautiful funky African woman wearing a flowing bohemian dress, under the night sky, wet asphalt reflecting colourful neon lights, cinematic lighting, professional photography, ultra-realistic, highly detailed face
 ```
 
 | ID | Pose | Seed | Output file |
 |---|---|---|---|
-| B1 | `pose_01.png` | 777 | `exp_b_01.png` |
-| B2 | `pose_02.png` | 777 | `exp_b_02.png` (also copied to `output_02.png`) |
+| B1 | `pose_01.png` - seated on a stool | 777 | `exp_b_01.png` |
+| B2 | `pose_02.png` - standing, fists raised | 777 | `exp_b_02.png` (also copied to `output_02.png`) |
 
-B1 uses the clean hint and B2 the tangled one, so this experiment measures two things at once:
-what the pose hint controls, and what happens when the hint itself is unreliable.
+Between them, `output_01.png` and `output_02.png` are the two halves of the assignment: the same
+prompt and the same seed produced a seated figure and a standing one, and the only thing that
+differed was which photograph the skeleton came from.
 
 ## Prompt-writing notes
 

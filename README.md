@@ -58,13 +58,13 @@ Open `pose_tool.ipynb` in Colab, then `Runtime > Change runtime type > T4 GPU`. 
 |---|---|---|
 | 1. Install dependencies | `diffusers`, `transformers`, `accelerate`, pinned `controlnet_aux` | ~2 min |
 | 2. Load models | OpenPose annotator, then SDXL + ControlNet + fp16-fix VAE | ~3 min |
-| 3. Extract pose | upload photos, extract skeletons, **inspect the preview** | ~10 s |
+| 3. Extract pose | upload photos, extract skeletons, **inspect the preview**, validate numerically | ~15 s |
 | 4. Generate image | `generate()` helper | instant |
 | 5. Experiments | A and B, 4 images | ~4 min on a T4 |
 | 6. Save results | writes `samples/` and downloads `samples.zip` | ~5 s |
 | 7. Findings | write-up | - |
 
-Section 3's side-by-side preview is not decoration. A missing arm in the skeleton is a missing arm in the output - check it before spending GPU time.
+Section 3's preview and its numeric validation are not decoration. A hint with an unclosed limb chain silently disables pose control for that limb, and nothing later in the run will tell you. Replace any reference that fails before spending GPU time.
 
 ### 4. Commit the results
 
@@ -100,53 +100,73 @@ A 16 GB T4 on the full-GPU path runs roughly 40-60 s per image.
 
 | Experiment | Held fixed | Varied | Result |
 |---|---|---|---|
-| **A** same pose, different prompts | `pose_01`, seed 1234, 28 steps, guidance 6.0, conditioning 0.8 | African woman in a bohemian dress on neon-lit wet asphalt / Middle Eastern warrior in neon armour in a laundromat | Skeleton held completely. Raised hand at the head, elbow angle, braced left hand, extended leg, bent leg, head tilt, and the figure's position and scale in frame were all reproduced across two unrelated subjects. Subject, wardrobe, setting, palette and lighting changed freely. |
-| **B** same prompt, different poses | neon-armour warrior prompt, seed 777, all sampler settings | `pose_01` (clean detection) / `pose_02` (tangled detection) | Identity carried across both. `B1` reproduced the seated leaning pose faithfully. `B2` lost the pose entirely: the crouch became a generic symmetric seated figure and the crop tightened from full-body to waist-up. |
+| **A** same pose, different prompts | `pose_01`, seed 1234, 28 steps, guidance 6.0, conditioning 0.8 | African woman in a bohemian dress on neon-lit wet asphalt / Middle Eastern warrior in neon armour in a laundromat | The skeleton held across both: raised hand at the head, elbow angle, braced second hand, raised knee, extended leg, head tilt, and the figure's position and scale in frame. Subject, wardrobe, setting, palette and lighting changed freely. |
+| **B** same prompt, different poses | neon-armour warrior prompt, seed 777, all sampler settings | `pose_01` (18/18 keypoints) / `pose_02` (17/18, left ankle missing) | Identity carried across both. `B1` reproduced the seated leaning pose. `B2` lost it: the crouch became a generic symmetric seated figure and the crop tightened from full-body to waist-up. |
 
-**Headline finding: the skeleton owns where the body is, the prompt owns what the body is.**
-A and B are the two halves of that claim.
+**The skeleton owns where the body is, the prompt owns what the body is.** A and B are the two
+halves of that claim.
 
-**Second finding, from B2: a bad hint does not corrupt pose control, it silently switches it off.**
-The tangled skeleton did not produce a tangled pose - it produced the blandest posture consistent
-with the prompt, because ControlNet had nothing coherent to enforce and the model fell back on its
-own prior. Nothing in the generation step reports that the hint was bad.
+**A bad hint does not corrupt pose control, it silently switches it off.** `B2`'s broken skeleton
+did not produce a broken pose - it produced the blandest posture consistent with the prompt,
+because ControlNet had nothing coherent to enforce. Nothing in the run reports that the hint was
+bad, which is why the notebook validates hints numerically in section 3b before generating.
+
+### The hint has to be sharp, and the right shape
+
+An earlier version of this notebook produced **three legs** from `pose_01`, whose detection is
+perfect (18/18 keypoints, score 1.00). The cause was hint rendering, not detection.
+`OpenposeDetector.__call__` draws at its own internal resolution and rescales: 832x1216 in,
+832x**1280** out. Rescaling back to 832x1216 blurred the stick figure - 2210 distinct colours
+against the ~43 a clean skeleton has - and squashed the body vertically by 5%.
+
+Given smeared, mis-proportioned limb lines, ControlNet cannot tell which shin belongs to which
+thigh, and rendered several interpretations of the same limb at once. Taking keypoints from
+`detect_poses()` and drawing them once at exactly the generation resolution removed the extra limb
+with prompt, seed and conditioning scale unchanged. **Hint sharpness is part of the conditioning
+signal, not cosmetics.**
+
+A conditioning-scale check at the same time: 1.0 tracks the skeleton slightly more closely than 0.8
+but stiffens the armour into flat plate and makes the raised hand worse. 0.8 stays the default.
 
 | Measure | Result |
 |---|---|
-| Pose-accurate images | 3 of 4 (`B2` failed) |
-| Images with malformed hands | 4 of 4 |
-| Pose extractions usable | 1 of 2 references (`pose_02` tangled) |
+| Pose hints passing numeric validation | 1 of 2 references (`pose_02` loses the left ankle) |
+| Images reproducing the reference pose | `A1`, `A2`, `B1` yes; `B2` no |
+| Images with malformed raised hands | all of them, at both conditioning scales |
 
-`samples/pose_02.png` was kept deliberately. It is the evidence behind limitation 1 rather than an
-assumed failure mode.
+`samples/pose_02.png` is kept deliberately - it is the evidence behind limitations 2 and 3 rather
+than an assumed failure mode.
 
 ## Limitations
 
 Observed in this run, not assumed.
 
-1. **Pose detection is the ceiling, and it fails silently.** `pose_02` produced a confident-looking
-   but wrong skeleton; the only downstream symptom was a pose that ignored the reference. Always
-   inspect the section 3 preview.
-2. **Self-occlusion is the specific trigger.** Both references were seated. The one where the arms
-   wrap across the shins is the one that failed. Crossed and overlapping limbs are the problem, not
-   seated poses in general.
-3. **The hint is 2D.** No depth is encoded, so limb crossings cannot be disambiguated - the
-   mechanism behind failures 1 and 2. Facing direction also has to be stated in the prompt.
-4. **Hands were malformed in all 4 images.** Fingers merged on every raised hand; in `B2` the hand
-   fused with the knee armour. Hand keypoints were on and `deformed hands` was in the negative
-   prompt - both reduced severity without fixing it.
-5. **Framing is not independent of the pose.** Crop follows the skeleton's extent in frame:
-   `pose_01` gave full-body compositions, the compact `pose_02` gave a waist-up crop.
-6. **Setting and lighting clauses lose to subject clauses.** `neon armour` rendered emphatically
+1. **A perfect skeleton is not sufficient.** `pose_01` scored 18/18 and still produced three legs
+   until the hint was rendered at the right size and sharpness. Detection quality and hint quality
+   are separate problems.
+2. **Detection failure is silent.** `pose_02` produced a confident-looking but wrong skeleton; the
+   only downstream symptom was a pose that ignored the reference. Section 3b turns that into a
+   number - run it every time.
+3. **Self-occlusion is the trigger for detection failure.** Both references were seated; the one
+   where the arms wrap across the shins is the one that lost a keypoint.
+4. **The hint is 2D.** No depth is encoded, so overlapping limbs cannot be disambiguated - the
+   mechanism behind both failures above. Facing direction has to be stated in the prompt.
+5. **Hands are the most reliable defect.** Fingers merged on every raised hand in every image,
+   before and after the hint fix, at both conditioning scales. Hand keypoints were on and
+   `deformed hands` was in the negative prompt. Braced or resting hands come out clearly better
+   than raised ones.
+6. **Framing cannot be set independently of the pose.** Crop follows the skeleton's extent in
+   frame.
+7. **Setting and lighting clauses lose to subject clauses.** `neon armour` rendered emphatically
    every time while `futuristic laundromat` survived as vague panels, and `studio lighting` was
    overridden by neon spill from the armour.
-7. **Speed on small VRAM is a real cost.** 8.4 min per image on 8 GB via CPU offload against about
-   a minute on a 16 GB T4. Fitting the model is not the same as running it usefully.
-8. **Single subject only.** Multi-person skeletons are detected, but SDXL blends identities between
-   overlapping figures. Not exercised in this run.
-9. **Reproducibility is per-environment.** Fixed seeds reproduce a comparison on the same GPU and
-   library versions; exact pixels are not portable across GPUs or `diffusers` versions.
-10. **`controlnet_aux` is lightly maintained.** Its imports break on `timm` upgrades - `0.0.9`
+8. **Speed on small VRAM is a real cost.** 8.4 min per image on 8 GB via CPU offload against about
+   a minute on a 16 GB T4.
+9. **Single subject only.** Multi-person skeletons are detected but SDXL blends identities between
+   overlapping figures. Not exercised here.
+10. **Reproducibility is per-environment.** Fixed seeds reproduce a comparison on the same GPU and
+    library versions; exact pixels are not portable.
+11. **`controlnet_aux` is lightly maintained.** Its imports break on `timm` upgrades - `0.0.9`
     cannot be resolved against a current `timm` at all, which is why `0.0.10` is pinned and a
     MediaPipe fallback ships in section 3b.
 

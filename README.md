@@ -109,7 +109,7 @@ halves of that claim.
 **A bad hint does not corrupt pose control, it silently switches it off.** `B2`'s broken skeleton
 did not produce a broken pose - it produced the blandest posture consistent with the prompt,
 because ControlNet had nothing coherent to enforce. Nothing in the run reports that the hint was
-bad, which is why the notebook validates hints numerically in section 3b before generating.
+bad, which is why the notebook validates hints numerically in section 3a before generating.
 
 ### The hint has to be sharp, and the right shape
 
@@ -159,7 +159,7 @@ Observed in this run, not assumed.
    until the hint was rendered at the right size and sharpness. Detection quality and hint quality
    are separate problems.
 2. **Detection failure is silent.** `pose_02` produced a confident-looking but wrong skeleton; the
-   only downstream symptom was a pose that ignored the reference. Section 3b turns that into a
+   only downstream symptom was a pose that ignored the reference. Section 3a turns that into a
    number - run it every time.
 3. **How the reference is framed is part of the pipeline.** `pose_02` lost its left ankle, and
    with it all pose control over that leg, because `ImageOps.fit` centre-cropped the reference
@@ -184,7 +184,7 @@ Observed in this run, not assumed.
     library versions; exact pixels are not portable.
 11. **`controlnet_aux` is lightly maintained.** Its imports break on `timm` upgrades - `0.0.9`
     cannot be resolved against a current `timm` at all, which is why `0.0.10` is pinned and a
-    MediaPipe fallback ships in section 3b.
+    MediaPipe fallback ships in section 3c.
 
 ## Alternative: FLUX.1-dev
 

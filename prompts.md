@@ -13,7 +13,7 @@ Every generation in `pose_tool.ipynb` is recorded here so any result can be repr
 | Resolution | 832 x 1216, references letterboxed (not cropped) to that ratio |
 | Steps | 28 |
 | Guidance scale | 5.0 |
-| Conditioning scale | 0.9 |
+| Conditioning scale | 1.0 (see the note below) |
 | Precision | fp16 |
 
 Negative prompt, used for every image:
@@ -88,7 +88,10 @@ what the pose hint controls, and what happens when the hint itself is unreliable
   skeleton (here, "seated" / "sitting") is fine and can even help.
 - **Do describe subject, wardrobe, setting, lighting and medium.** Those are exactly the
   dimensions the skeleton leaves free.
-- **Non-photorealistic styles need a higher conditioning scale** (roughly +0.1-0.2) to hold the
-  same pose. Both prompts here are photorealistic, so the 0.8 default is used throughout.
+- **Conditioning scale 1.0, not 0.8.** Measured by re-detecting the pose in the generated image
+  and comparing it joint by joint with the hint: at 0.8 the folded knee landed 0.45 of the frame
+  away from the hint (mean error 0.099), at 1.0 every joint is within 0.07 (mean 0.031). A folded
+  or foreshortened limb is where a low scale fails first, and it fails without looking obviously
+  wrong. The cost of 1.0 is slightly stiffer material rendering.
 - Keep the negative prompt identical across a comparison, otherwise it stops being a
   single-variable experiment.

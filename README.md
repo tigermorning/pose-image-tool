@@ -83,8 +83,8 @@ The zip also contains the experiment images under their own names (`exp_a_*`, `e
 
 | Symptom | Fix |
 |---|---|
-| Pose ignored | raise `conditioning_scale` toward 1.0 |
-| Stiff, mannequin-like anatomy | lower `conditioning_scale` toward 0.6 |
+| Pose ignored, or a folded limb in the wrong place | `conditioning_scale` 1.0, and score it with `pose_fidelity()` rather than trusting your eye |
+| Stiff, mannequin-like anatomy | lower `conditioning_scale` toward 0.8, but re-check pose fidelity - that is what 0.8 costs |
 | Prompt ignored | raise `guidance_scale`, or lower `conditioning_scale` |
 | Doubled limbs | remove posture words that *contradict* the hint; words that agree with it ("seated" over a seated skeleton) are harmless |
 | CUDA OOM on a T4 | replace `pipe.to('cuda')` with `pipe.enable_model_cpu_offload()` |
@@ -125,11 +125,25 @@ thigh, and rendered several interpretations of the same limb at once. Taking key
 with prompt, seed and conditioning scale unchanged. **Hint sharpness is part of the conditioning
 signal, not cosmetics.**
 
-A conditioning-scale check at the same time: 1.0 tracks the skeleton slightly more closely than 0.8
-but stiffens the armour into flat plate and makes the raised hand worse. 0.8 stays the default.
+### Conditioning scale 1.0, measured not guessed
+
+Judging pose fidelity by eye failed twice here, so it is measured: the pose is re-detected in the
+generated image and compared with the hint joint by joint (`pose_fidelity()` in section 4).
+
+| conditioning_scale | mean joint error | worst joint | folded knee |
+|---|---|---|---|
+| 0.8 | 0.099 | 0.448 | lands 0.45 of the frame from the hint |
+| 1.0 | **0.031** | **0.066** | within 0.024 |
+
+At 0.8 the seated reference's raised knee and mid-height ankle were simply not reproduced - both
+feet ended up on the floor - while the torso and arms matched well enough that the image looked
+correct. **Folded and foreshortened limbs are where a low conditioning scale fails first, and it
+fails without looking wrong.** 1.0 is now the default; the cost is slightly stiffer material
+rendering and a marginally worse raised hand.
 
 | Measure | Result |
 |---|---|
+| Mean joint error against the hint, conditioning 1.0 | 0.031 (worst joint 0.066) |
 | Pose hints passing numeric validation | 2 of 2 once letterboxed; 1 of 2 when centre-cropped |
 | Images reproducing the reference pose | `A1`, `A2`, `B1` yes; `B2` no |
 | Images with malformed raised hands | all of them, at both conditioning scales |

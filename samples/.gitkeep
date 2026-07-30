@@ -1,0 +1,10 @@
+# Generated artifacts land here.
+#
+# Run pose_tool.ipynb section 6, download samples.zip, unzip into this directory, commit:
+#
+#   pose_01.png    skeleton from the first reference
+#   output_01.png  pose_01 + prompt A1 (astronaut)
+#   pose_02.png    skeleton from the second reference
+#   output_02.png  pose_02 + prompt B (red-dress dancer)
+#
+# The zip also contains exp_a_*, exp_b_* and exp_c_* from the experiment cells.

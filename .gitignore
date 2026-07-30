@@ -1,0 +1,13 @@
+# Reference photos are uploaded at runtime, never committed (third-party licensing).
+references/
+
+# Packaged download from notebook section 6.
+samples.zip
+
+# Agent tooling state
+.omc/
+
+# Colab / Jupyter scratch
+.ipynb_checkpoints/
+__pycache__/
+*.pyc

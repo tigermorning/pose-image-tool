@@ -8,6 +8,21 @@ reference photo -> OpenPose keypoints -> skeleton image -> ControlNet -> SDXL ->
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/tigermorning/pose-image-tool/blob/main/pose_tool.ipynb)
 
+## How this answers the assignment
+
+| Assignment step | Where | Output |
+|---|---|---|
+| **Step 1** - pick one reference photo, extract its pose with OpenPose, feed it to ControlNet, and generate a *different person* in that same pose | notebook section 5, prompt **A1** | `samples/output_01.png` |
+| **Step 2a** - same pose, change only the prompt | section 5, **A1 vs A2** | `samples/exp_a_1.png`, `samples/exp_a_2.png` |
+| **Step 2b** - same prompt, change only the pose photo | section 5, **B1 vs B2** | `samples/exp_b_01.png`, `samples/output_02.png` |
+| **Step 2 write-up** - what was changed and how the output changed | section 7, and [Test results](#test-results) below | - |
+
+Reference photo: one seated full-body shot. `output_01.png` and `output_02.png` share the prompt and
+the seed exactly and differ only in which photograph the skeleton came from - that difference is the
+evidence the tool works.
+
+Prompts, seeds and every setting are in [`prompts.md`](prompts.md).
+
 ## Contents
 
 | Path | What it is |

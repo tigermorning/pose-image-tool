@@ -151,6 +151,35 @@ rendering and a marginally worse raised hand.
 `samples/pose_02.png` is kept deliberately - it is the evidence behind limitations 2 and 3 rather
 than an assumed failure mode.
 
+### Hands: three hint variants, no improvement
+
+Hands were the one defect that survived every other fix, so the hint itself was varied while the
+prompt, seed, steps, guidance and conditioning scale were held constant:
+
+| Hint | mean joint error | worst joint | l_wrist | r_wrist | fingers |
+|---|---|---|---|---|---|
+| **A** body + hand keypoints, drawn at 832x1216 | 0.085 | r_knee 0.266 | **0.028** | 0.161 | merged |
+| B body only | 0.108 | l_wrist 0.278 | 0.278 | 0.077 | merged |
+| C body only, drawn at 512 and upscaled NEAREST (thicker limb lines) | 0.084 | r_knee 0.245 | 0.204 | 0.054 | merged |
+
+Three conclusions, all measured:
+
+1. **Keep the hand keypoints.** Community guidance for this ControlNet says to disable hand
+   detection. That is wrong for this combination: B, the body-only hint, was the worst of the three
+   and put the braced wrist 0.278 away from the hint - visibly, the supporting hand slid from the
+   machine onto the knee. Hand keypoints anchor the wrist even when they do not fix the fingers.
+2. **Thicker limb lines are not the answer either.** C matched A on mean error (0.084 vs 0.085) but
+   lost the same wrist accuracy B did, because C also dropped the hand keypoints. Line thickness and
+   hand keypoints were not separated in this test; what is clear is that thickness alone bought
+   nothing.
+3. **Finger quality is not reachable through hint construction.** All three variants produced merged
+   fingers on the raised hand. The hint controls where a hand *is*, not how many fingers it has.
+
+The remaining lever is a second pass: crop the hand region, regenerate it at a higher effective
+resolution with inpainting, and composite it back. That addresses the real cause - hands occupy too
+few pixels at 832x1216 - but it is a separate stage beyond the scope of this tool, and it is not
+implemented here.
+
 ## Limitations
 
 Observed in this run, not assumed.
@@ -167,10 +196,12 @@ Observed in this run, not assumed.
    keypoints. The crouch was never the problem.
 4. **The hint is 2D.** No depth is encoded, so overlapping limbs cannot be disambiguated - the
    mechanism behind both failures above. Facing direction has to be stated in the prompt.
-5. **Hands are the most reliable defect.** Fingers merged on every raised hand in every image,
-   before and after the hint fix, at both conditioning scales. Hand keypoints were on and
-   `deformed hands` was in the negative prompt. Braced or resting hands come out clearly better
-   than raised ones.
+5. **Hands are the one defect nothing here fixed.** Fingers merged on every raised hand in every
+   image - before and after the hint fix, at both conditioning scales, and across all three hint
+   variants tested above. Hand keypoints were enabled and `deformed hands` was in the negative
+   prompt. Braced or resting hands come out clearly better than raised ones. Hands are small at
+   832x1216, and no amount of conditioning changes that; an inpainting pass is the real fix and is
+   not part of this tool.
 6. **Framing cannot be set independently of the pose.** Crop follows the skeleton's extent in
    frame.
 7. **Setting and lighting clauses lose to subject clauses.** `neon armour` rendered emphatically

@@ -28,7 +28,7 @@ Pose hint, seed and all sampler settings fixed. Only the prompt changes.
 
 | ID | Pose | Seed | Prompt | Output file |
 |---|---|---|---|---|
-| A1 | `pose_01.png` | 1234 | `a professional astronaut in a white spacesuit standing on red martian soil, cinematic lighting, photorealistic` | `exp_a_1.png` (also copied to `output_01.png`) |
+| A1 | `pose_01.png` | 1234 | `a professional astronaut in a white spacesuit on red martian soil, cinematic lighting, photorealistic` | `exp_a_1.png` (also copied to `output_01.png`) |
 | A2 | `pose_01.png` | 1234 | `a medieval knight in polished steel armour in a stone castle courtyard, overcast light, photorealistic` | `exp_a_2.png` |
 | A3 | `pose_01.png` | 1234 | `a watercolour illustration of a ballet dancer, soft pastel palette, visible paper texture` | `exp_a_3.png` |
 
@@ -41,7 +41,7 @@ Prompt, seed and all sampler settings fixed. Only the pose hint changes.
 Prompt:
 
 ```
-a professional dancer in a flowing red dress in an empty concrete studio, dramatic side light, photorealistic
+a fashion model in a long charcoal wool coat in an empty concrete studio, dramatic side light, photorealistic
 ```
 
 | ID | Pose | Seed | Output file |
@@ -59,7 +59,7 @@ Pose hint, prompt and seed fixed. Only `controlnet_conditioning_scale` changes.
 Prompt:
 
 ```
-a rock climber in technical outdoor gear on a granite wall, midday sun, photorealistic
+a mountaineer in technical outdoor gear, granite rock face behind, midday sun, photorealistic
 ```
 
 | ID | Pose | Seed | Conditioning scale | Output file |

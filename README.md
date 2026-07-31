@@ -1,252 +1,120 @@
-# pose-image-tool
-
-Generate images that follow **both** a reference pose and a text prompt, in a single Google Colab notebook.
-
-```
-reference photo -> OpenPose keypoints -> skeleton image -> ControlNet -> SDXL -> output image
-```
+# 원하는 포즈로 이미지 만드는 도구
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/tigermorning/pose-image-tool/blob/main/pose_tool.ipynb)
 
-## How this answers the assignment
+## 도구 설명
 
-| Assignment step | Where | Output |
-|---|---|---|
-| **Step 1** - pick one reference photo, extract its pose with OpenPose, feed it to ControlNet, and generate a *different person* in that same pose | notebook section 5, prompt **A1** | `samples/output_01.png` |
-| **Step 2a** - same pose, change only the prompt | section 5, **A1 vs A2** | `samples/exp_a_1.png`, `samples/exp_a_2.png` |
-| **Step 2b** - same prompt, change only the pose photo | section 5, **B1 vs B2** | `samples/exp_b_01.png`, `samples/output_02.png` |
-| **Step 2 write-up** - what was changed and how the output changed | section 7, and [Test results](#test-results) below | - |
+사진 한 장과 텍스트 프롬프트를 주면, **사진과 같은 자세를 한 다른 인물이나 장면**을 생성합니다.
+OpenPose가 사진에서 관절을 뽑고, ControlNet이 그 스켈레톤을 매 디노이징 스텝에 주입하고,
+SDXL이 스켈레톤에 담기지 않은 나머지를 채웁니다.
 
-Reference photo: one seated full-body shot. `output_01.png` and `output_02.png` share the prompt and
-the seed exactly and differ only in which photograph the skeleton came from - that difference is the
-evidence the tool works.
+```
+참조 사진 → OpenPose 관절 검출 → 스켈레톤 이미지 → ControlNet → SDXL → 결과 이미지
+```
 
-Prompts, seeds and every setting are in [`prompts.md`](prompts.md).
+역할 분담이 이 도구의 핵심입니다. **스켈레톤은 신체가 어디에 있는지를, 프롬프트는 신체가 무엇인지를
+담당합니다.** 그래서 이 저장소의 어떤 프롬프트도 자세를 서술하지 않습니다.
 
-## Contents
-
-| Path | What it is |
+| 구성 요소 | 사용 모델 |
 |---|---|
-| `pose_tool.ipynb` | The tool. Install, load models, extract pose, generate, run experiments, save results, findings. |
-| `prompts.md` | Every prompt, seed and setting used, so each result is reproducible. |
-| `samples/` | Pose hints and generated results - five files, listed below. |
+| 생성 모델 | `stabilityai/stable-diffusion-xl-base-1.0` |
+| ControlNet | `thibaud/controlnet-openpose-sdxl-1.0` |
+| 포즈 검출기 | `controlnet_aux.OpenposeDetector` (`lllyasviel/Annotators`) |
+| GPU | Colab 무료 **T4**로 충분 — 장당 40~60초 |
 
-## Description
+### FLUX.2-klein 대신 SDXL을 쓴 이유
 
-The notebook separates *where the body is* from *what the body is*.
+과제는 FLUX.2-klein 4B "또는 비슷한 모델"을 제안했습니다. 그 경로를 확인한 뒤 배제했습니다.
+klein은 4B가 아니라 **9B**이고 텍스트 인코더가 Mistral-Small-3.1 **24B**여서 bf16으로 약 50GB입니다.
+게다가 **공식 ControlNet이 없습니다** — OpenPose 경로는 서드파티 커뮤니티 구현 하나뿐입니다.
+무료 T4에서 실행이 불가능하므로, 이 노트북을 여는 누구도 재현할 수 없게 됩니다.
+SDXL + OpenPose ControlNet은 `diffusers`가 정식 지원하고 무료 T4에서 fp16으로 돌아가며,
+파이프라인 개념은 동일하게 시연됩니다. FLUX.1-dev 업그레이드 경로는 문서 아래에 적어 두었습니다.
 
-- **OpenPose** (`controlnet_aux.OpenposeDetector`, weights from `lllyasviel/Annotators`) reads a reference photo and returns an 18-keypoint skeleton drawn as a colour-coded image. It generates nothing; it only detects.
-- **ControlNet** (`thibaud/controlnet-openpose-sdxl-1.0`) injects that skeleton into every denoising step of the base model, constraining limb placement.
-- **SDXL** (`stabilityai/stable-diffusion-xl-base-1.0`) supplies everything the skeleton does not encode: identity, wardrobe, setting, lighting, medium.
+## 사용법
 
-All generation goes through one `generate(pose_image, prompt, seed=..., conditioning_scale=...)` helper, so each experiment changes exactly one variable.
+1. **Colab에서 노트북 열기** — 위 배지를 클릭한 뒤 `런타임 > 런타임 유형 변경 > T4 GPU`를 설정합니다.
+   GPU를 켜지 않으면 1번 섹션에서 즉시 중단됩니다.
+2. **셀을 위에서 아래로 순서대로 실행** — 1번 설치, 2번 모델 로드, 3번 사진 업로드와 포즈 추출,
+   5번 실험 두 가지, 6번 저장. 전체 약 10분입니다.
+   **3a번 출력을 반드시 확인하세요.** 모든 힌트가 `18/18 keypoints, all four limb chains complete`로
+   나와야 합니다. 사지 사슬이 끊긴 힌트는 그 팔다리의 포즈 제어가 조용히 꺼진 상태이고,
+   이후 어떤 단계도 경고하지 않습니다.
+3. **결과 이미지 저장 위치** — Colab 세션의 `samples/` 폴더이며, 6번 섹션이 `samples.zip`으로
+   자동 다운로드합니다. 파일 5개입니다.
 
-### Why SDXL and not FLUX
-
-The assignment suggested FLUX.2-klein. That path was checked and rejected for this deliverable:
-
-- FLUX.2-klein is **9B**, not 4B, and its text encoder is Mistral-Small-3.1 **24B** - roughly 50 GB in bf16.
-- It has **no official ControlNet**. The only OpenPose route is a third-party community implementation.
-- It cannot run on a free Colab T4, which would make the notebook unreproducible for anyone opening it.
-
-SDXL + OpenPose ControlNet is first-class in `diffusers`, runs in fp16 on a free T4 at ~10 GB peak, and demonstrates the identical pipeline concept. The upgrade path is documented under [Alternative: FLUX.1-dev](#alternative-flux1-dev).
-
-## Usage
-
-### 1. Prepare references
-
-Have **2-3 photos of people in clearly different poses** ready. Requirements that actually matter:
-
-- one person per photo
-- full body, or at least head-to-knee
-- limbs not overlapping the torso, not cropped by the frame
-
-Crowds, heavy occlusion and extreme foreshortening are where pose detection fails, and nothing downstream can repair it.
-
-### 2. Open the notebook
-
-Open `pose_tool.ipynb` in Colab, then `Runtime > Change runtime type > T4 GPU`. A GPU assertion in section 1 fails fast if you forget.
-
-### 3. Run the sections in order
-
-| Section | What happens | Time |
+| 파일 | 내용 | 과제 단계 |
 |---|---|---|
-| 1. Install dependencies | `diffusers`, `transformers`, `accelerate`, pinned `controlnet_aux` | ~2 min |
-| 2. Load models | OpenPose annotator, then SDXL + ControlNet + fp16-fix VAE | ~3 min |
-| 3. Extract pose | upload photos, extract skeletons, **inspect the preview**, validate numerically | ~15 s |
-| 4. Generate image | `generate()` helper | instant |
-| 5. Experiments | A and B, 4 images | ~4 min on a T4 |
-| 6. Save results | writes `samples/` and downloads `samples.zip` | ~5 s |
-| 7. Findings | write-up | - |
+| `samples/pose_01.png` | 참조 사진에서 추출한 스켈레톤 | 1단계 |
+| `samples/output_01.png` | 그 스켈레톤 + 아프리카 여성 프롬프트 | 1단계, 그리고 2단계-B의 `pose_01` 쪽 |
+| `samples/output_01_alt_prompt.png` | 같은 스켈레톤, 잉크 드로잉 프롬프트 | 2단계-A |
+| `samples/pose_02.png` | 두 번째 포즈 사진의 스켈레톤 | 2단계-B |
+| `samples/output_02.png` | `pose_02` + `output_01.png`과 **완전히 같은** 프롬프트·시드 | 2단계-B |
 
-Section 3's preview and its numeric validation are not decoration. A hint with an unclosed limb chain silently disables pose control for that limb, and nothing later in the run will tell you. Replace any reference that fails before spending GPU time.
+두 실험이 시드 1234를 공유합니다. 그래서 2단계-B의 `pose_01` 쪽 결과가 1단계 결과와 구조적으로
+동일해지고, 같은 이미지를 두 번 저장하지 않습니다. 실제 생성은 3장입니다.
 
-### 4. Commit the results
+참조 사진 원본은 커밋하지 않습니다. `references/`는 `.gitignore` 대상이고, 공개되는 것은
+추출된 스켈레톤과 생성 결과물뿐입니다. 프롬프트·시드·설정 전체는 [`prompts.md`](prompts.md)에 있고,
+관찰 기록 전문은 노트북 7번 섹션에 있습니다.
 
-Section 6 downloads `samples.zip`. Unzip it into `samples/` and commit. Canonical filenames:
+## 테스트 결과
 
-| File | Content | Assignment step |
-|---|---|---|
-| `samples/pose_01.png` | skeleton extracted from the reference photo | 1 |
-| `samples/output_01.png` | that skeleton + the African-woman prompt | 1, and the `pose_01` arm of 2b |
-| `samples/output_01_alt_prompt.png` | same skeleton, the ink-drawing prompt | 2a |
-| `samples/pose_02.png` | skeleton from the second pose photo | 2b |
-| `samples/output_02.png` | `pose_02` + the *same* prompt and seed as `output_01.png` | 2b |
+두 실험 모두 한 번에 한 가지만 바꿉니다. 포즈 재현도는 **눈으로 판단하지 않고 측정합니다.**
+생성된 이미지에 OpenPose를 다시 돌려 힌트와 관절별 거리를 비교합니다
+(`pose_fidelity()`, 4a번 섹션). 0.03 근처면 자세가 재현된 것이고, 0.3 근처면 다른 자세입니다.
 
-Five files, and every one carries something the others do not. Both experiments use seed 1234, which
-makes step 2b's `pose_01` arm identical to step 1's result, so it is not stored twice - three images
-are generated in total.
+- **포즈 1** — 스툴에 앉아 정면, 한 다리는 바닥으로 뻗고 다른 무릎은 세움, 양팔은 몸통에서 떨어짐.
+  힌트 검증 결과 18/18 키포인트, 사슬 전부 완전, 2D 교차 없음.
+  → 프롬프트: *보헤미안 맥시 드레스를 입은 아름다운 아프리카 여성, 햇빛 드는 콘크리트 갤러리, 85mm f/2*
+  → 결과: `output_01.png`
+- **포즈 1, 프롬프트만 변경** → 프롬프트: *잉크와 수채로 그린 유랑 인형극사, 크림색 종이,
+  오커와 번트 엄버* → 결과: `output_01_alt_prompt.png`
+  사실성에서 멀어질 때 포즈 추종이 먼저 약해지므로, 이쪽이 더 어려운 조건입니다.
+- **포즈 2, 프롬프트 고정** — 서서 정면, 양 팔뚝을 올려 가슴 높이에서 주먹 쥠, 발은 넓게.
+  힌트 검증 결과 18/18, 사슬 전부 완전, 교차 없음.
+  → 프롬프트: 포즈 1과 완전히 동일 → 결과: `output_02.png`
 
-### Tuning
+같은 파이프라인을 여러 번 돌려 확정한 설정값과 그 근거입니다.
 
-| Symptom | Fix |
+| 확정 사항 | 측정 근거 |
 |---|---|
-| Pose ignored, or a folded limb in the wrong place | `conditioning_scale` 1.0, and score it with `pose_fidelity()` rather than trusting your eye |
-| Stiff, mannequin-like anatomy | lower `conditioning_scale` toward 0.8, but re-check pose fidelity - that is what 0.8 costs |
-| Prompt ignored | raise `guidance_scale`, or lower `conditioning_scale` |
-| Doubled limbs | remove posture words that *contradict* the hint; words that agree with it ("seated" over a seated skeleton) are harmless |
-| CUDA OOM on a T4 | replace `pipe.to('cuda')` with `pipe.enable_model_cpu_offload()` |
-| `AttributeError: module 'mediapipe' has no attribute 'solutions'` | `!pip uninstall -y mediapipe`, restart the runtime. controlnet_aux imports mediapipe at package level and breaks against Colab's build; it does not need it |
-| Black or NaN images | the fp16-fix VAE was skipped; the stock SDXL VAE overflows in fp16 |
+| conditioning scale은 0.8이 아니라 1.0 | 0.8에서 접힌 무릎이 화면의 0.448만큼 힌트를 벗어났습니다(평균 0.099). 1.0에서는 모든 관절이 0.066 이내(평균 0.031)입니다 |
+| 힌트는 생성 해상도에 직접 그려야 함 | 검출기 내부 리스케일에 맡기면 스켈레톤이 번져 색이 43개에서 2210개로 늘고 세로로 5% 압축됩니다. 그 상태에서 SDXL이 **다리를 3개** 그렸습니다 |
+| 참조 사진은 중앙 크롭이 아니라 레터박스 | 355x592 사진에서 중앙 크롭이 높이의 12%를 잘라내 왼쪽 발목을 프레임 밖으로 밀어냈고, 키포인트가 18/18에서 17/18로 떨어졌습니다 |
+| 손 키포인트는 켠 상태 유지 | 이 ControlNet에서는 손 검출을 끄라는 권고가 있으나, 실측 결과 끄면 짚은 손목 오차가 0.028에서 0.278로 악화됐습니다 |
 
-## Test results
+## 한계
 
-> The numbers below were measured on an earlier pair of references (a crouch and a profile shot) that failed the section 3a keypoint check. The reference pair has since been replaced with two that pass it cleanly, and this section is regenerated from that run. The methodology and the conclusions about hint construction, framing and conditioning scale carry over unchanged.
+- **든 손의 손가락이 뭉개집니다.** 다른 조건을 모두 고정한 채 힌트 구성 3가지를 비교했습니다 —
+  몸통+손 키포인트, 몸통만, 몸통만+굵은 선. 셋 다 실패했습니다. 832x1216에서 손이 차지하는 픽셀이
+  너무 적은 것이 원인입니다. 손 영역 인페인팅이 실질적 해법이지만 이 도구의 범위를 넘습니다.
+  바닥이나 물체를 짚은 손은 든 손보다 눈에 띄게 낫고, 그래서 `pose_02`는 쥔 주먹을 쓰는 사진입니다.
+- **포즈 힌트는 조용히 실패합니다.** 엉덩이-발목 사슬이 끊기면 자세가 틀리게 나오는 것이 아니라
+  **무난한 기본 자세**가 나옵니다. ControlNet이 강제할 것이 없으니 모델이 자기 사전지식으로
+  되돌아가기 때문입니다. 실행 중 어디에서도 경고하지 않습니다. 3a번 섹션이 생성 전에 이것을 잡아내며,
+  후보 참조 사진 6장 중 4장이 여기서 탈락했습니다.
+- **검출을 깨뜨리는 것은 가림입니다.** 코트 안으로 들어간 팔은 사지 사슬 하나를 통째로 잃었고(15/18),
+  상반신 위주 사진은 다리 관절이 하나도 잡히지 않았습니다(12/18).
+- **힌트는 2D입니다.** 깊이 정보가 없어서 겹친 팔다리를 구분할 수 없고, 인물이 바라보는 방향은
+  프롬프트가 지정해야 합니다.
+- **구도는 포즈와 독립적으로 정할 수 없습니다.** 크롭이 스켈레톤의 화면 점유 범위를 따라갑니다.
+- **프롬프트의 절들이 균등하게 반영되지 않습니다.** 구체적인 쪽이 이깁니다 —
+  `wet asphalt reflecting colourful neon lights`는 충실히 그려졌지만 `futuristic laundromat`은
+  무시됐습니다. 또한 텍스트 인코더가 77토큰에서 **뒤쪽부터** 조용히 잘라내므로,
+  프롬프트를 수정할 때마다 토크나이저로 확인해야 합니다.
+- **사실성은 SDXL 1.0의 천장입니다.** `SG161222/RealVisXL_V5.0` 같은 사실성 파인튜닝은
+  `BASE_ID` 한 줄 교체로 적용되며 도움이 됩니다. 다만 최신 상용 이미지 모델 수준을 원한다면
+  설정이 아니라 base 모델 자체를 바꿔야 합니다.
 
-Two experiments, each isolating one variable. Full prompts and seeds in [`prompts.md`](prompts.md).
-Measured on an 8 GB RTX 3060 Ti (`enable_model_cpu_offload()`, fp16, torch 2.6.0+cu124,
-diffusers 0.39.0): 5.4 s per pose extraction, 435-553 s per generated image (mean 506 s).
-A 16 GB T4 on the full-GPU path runs roughly 40-60 s per image.
+### FLUX.1-dev 업그레이드 경로
 
-| Experiment | Held fixed | Varied | Result |
-|---|---|---|---|
-| **A** same pose, different prompts | `pose_01`, seed 1234, 28 steps, guidance 6.0, conditioning 0.8 | African woman in a bohemian dress on neon-lit wet asphalt / Middle Eastern warrior in neon armour in a laundromat | The skeleton held across both: raised hand at the head, elbow angle, braced second hand, raised knee, extended leg, head tilt, and the figure's position and scale in frame. Subject, wardrobe, setting, palette and lighting changed freely. |
-| **B** same prompt, different poses | neon-armour warrior prompt, seed 777, all sampler settings | `pose_01` / `pose_02`, two clearly different seated poses | Identity carried across both. `B1` reproduced the seated leaning pose. `B2` lost it: the crouch became a generic symmetric seated figure and the crop tightened from full-body to waist-up. |
+2번 섹션을 `black-forest-labs/FLUX.1-dev` + `Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro-2.0`의
+`pose` 모드로 교체하면 됩니다. 대가는 유료 L4/A100 런타임과 8bit 양자화, 게이트 저장소용
+Hugging Face 토큰, 그리고 `guidance_scale` 재조정입니다. 노트북 구조와 `generate()` 인터페이스는
+그대로 쓸 수 있습니다.
 
-**The skeleton owns where the body is, the prompt owns what the body is.** A and B are the two
-halves of that claim.
+## 라이선스
 
-**A bad hint does not corrupt pose control, it silently switches it off.** `B2`'s broken skeleton
-did not produce a broken pose - it produced the blandest posture consistent with the prompt,
-because ControlNet had nothing coherent to enforce. Nothing in the run reports that the hint was
-bad, which is why the notebook validates hints numerically in section 3a before generating.
-
-### The hint has to be sharp, and the right shape
-
-An earlier version of this notebook produced **three legs** from `pose_01`, whose detection is
-perfect (18/18 keypoints, score 1.00). The cause was hint rendering, not detection.
-`OpenposeDetector.__call__` draws at its own internal resolution and rescales: 832x1216 in,
-832x**1280** out. Rescaling back to 832x1216 blurred the stick figure - 2210 distinct colours
-against the ~43 a clean skeleton has - and squashed the body vertically by 5%.
-
-Given smeared, mis-proportioned limb lines, ControlNet cannot tell which shin belongs to which
-thigh, and rendered several interpretations of the same limb at once. Taking keypoints from
-`detect_poses()` and drawing them once at exactly the generation resolution removed the extra limb
-with prompt, seed and conditioning scale unchanged. **Hint sharpness is part of the conditioning
-signal, not cosmetics.**
-
-### Conditioning scale 1.0, measured not guessed
-
-Judging pose fidelity by eye failed twice here, so it is measured: the pose is re-detected in the
-generated image and compared with the hint joint by joint (`pose_fidelity()` in section 4).
-
-| conditioning_scale | mean joint error | worst joint | folded knee |
-|---|---|---|---|
-| 0.8 | 0.099 | 0.448 | lands 0.45 of the frame from the hint |
-| 1.0 | **0.031** | **0.066** | within 0.024 |
-
-At 0.8 the seated reference's raised knee and mid-height ankle were simply not reproduced - both
-feet ended up on the floor - while the torso and arms matched well enough that the image looked
-correct. **Folded and foreshortened limbs are where a low conditioning scale fails first, and it
-fails without looking wrong.** 1.0 is now the default; the cost is slightly stiffer material
-rendering and a marginally worse raised hand.
-
-| Measure | Result |
-|---|---|
-| Mean joint error against the hint, conditioning 1.0 | 0.031 (worst joint 0.066) |
-| Pose hints passing numeric validation | 2 of 2 once letterboxed; 1 of 2 when centre-cropped |
-| Images reproducing the reference pose | `A1`, `A2`, `B1` yes; `B2` no |
-| Images with malformed raised hands | all of them, at both conditioning scales |
-
-`samples/pose_02.png` is kept deliberately - it is the evidence behind limitations 2 and 3 rather
-than an assumed failure mode.
-
-### Hands: three hint variants, no improvement
-
-Hands were the one defect that survived every other fix, so the hint itself was varied while the
-prompt, seed, steps, guidance and conditioning scale were held constant:
-
-| Hint | mean joint error | worst joint | l_wrist | r_wrist | fingers |
-|---|---|---|---|---|---|
-| **A** body + hand keypoints, drawn at 832x1216 | 0.085 | r_knee 0.266 | **0.028** | 0.161 | merged |
-| B body only | 0.108 | l_wrist 0.278 | 0.278 | 0.077 | merged |
-| C body only, drawn at 512 and upscaled NEAREST (thicker limb lines) | 0.084 | r_knee 0.245 | 0.204 | 0.054 | merged |
-
-Three conclusions, all measured:
-
-1. **Keep the hand keypoints.** Community guidance for this ControlNet says to disable hand
-   detection. That is wrong for this combination: B, the body-only hint, was the worst of the three
-   and put the braced wrist 0.278 away from the hint - visibly, the supporting hand slid from the
-   machine onto the knee. Hand keypoints anchor the wrist even when they do not fix the fingers.
-2. **Thicker limb lines are not the answer either.** C matched A on mean error (0.084 vs 0.085) but
-   lost the same wrist accuracy B did, because C also dropped the hand keypoints. Line thickness and
-   hand keypoints were not separated in this test; what is clear is that thickness alone bought
-   nothing.
-3. **Finger quality is not reachable through hint construction.** All three variants produced merged
-   fingers on the raised hand. The hint controls where a hand *is*, not how many fingers it has.
-
-The remaining lever is a second pass: crop the hand region, regenerate it at a higher effective
-resolution with inpainting, and composite it back. That addresses the real cause - hands occupy too
-few pixels at 832x1216 - but it is a separate stage beyond the scope of this tool, and it is not
-implemented here.
-
-## Limitations
-
-Observed in this run, not assumed.
-
-1. **A perfect skeleton is not sufficient.** `pose_01` scored 18/18 and still produced three legs
-   until the hint was rendered at the right size and sharpness. Detection quality and hint quality
-   are separate problems.
-2. **Detection failure is silent.** `pose_02` produced a confident-looking but wrong skeleton; the
-   only downstream symptom was a pose that ignored the reference. Section 3a turns that into a
-   number - run it every time.
-3. **How the reference is framed is part of the pipeline.** `pose_02` lost its left ankle, and
-   with it all pose control over that leg, because `ImageOps.fit` centre-cropped the reference
-   to the target aspect ratio and cut the ankle out of frame. Letterboxing recovers all 18
-   keypoints. The crouch was never the problem.
-4. **The hint is 2D.** No depth is encoded, so overlapping limbs cannot be disambiguated - the
-   mechanism behind both failures above. Facing direction has to be stated in the prompt.
-5. **Hands are the one defect nothing here fixed.** Fingers merged on every raised hand in every
-   image - before and after the hint fix, at both conditioning scales, and across all three hint
-   variants tested above. Hand keypoints were enabled and `deformed hands` was in the negative
-   prompt. Braced or resting hands come out clearly better than raised ones. Hands are small at
-   832x1216, and no amount of conditioning changes that; an inpainting pass is the real fix and is
-   not part of this tool.
-6. **Framing cannot be set independently of the pose.** Crop follows the skeleton's extent in
-   frame.
-7. **Setting and lighting clauses lose to subject clauses.** `neon armour` rendered emphatically
-   every time while `futuristic laundromat` survived as vague panels, and `studio lighting` was
-   overridden by neon spill from the armour.
-8. **Speed on small VRAM is a real cost.** 8.4 min per image on 8 GB via CPU offload against about
-   a minute on a 16 GB T4.
-9. **Single subject only.** Multi-person skeletons are detected but SDXL blends identities between
-   overlapping figures. Not exercised here.
-10. **Reproducibility is per-environment.** Fixed seeds reproduce a comparison on the same GPU and
-    library versions; exact pixels are not portable.
-11. **`controlnet_aux` is lightly maintained.** Its imports break on `timm` upgrades - `0.0.9`
-    cannot be resolved against a current `timm` at all, which is why `0.0.10` is pinned and a
-    MediaPipe fallback ships in section 3c.
-
-## Alternative: FLUX.1-dev
-
-For better anatomy and prompt adherence, swap section 2 for `Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro-2.0` in `pose` mode on top of `black-forest-labs/FLUX.1-dev`. Costs:
-
-- a paid L4 or A100 runtime, plus 8-bit quantisation
-- a Hugging Face token, since FLUX.1-dev is a gated repo
-- `guidance_scale` semantics differ from SDXL and need retuning
-
-The notebook's structure and the `generate()` interface carry over unchanged.
-
-## Reference images and licensing
-
-No reference photos are committed. Section 3 uploads your own images, which keeps the repository free of third-party photo licensing questions. Model licences apply as published: SDXL under CreativeML Open RAIL++-M, the ControlNet weights under their own repository's terms.
+참조 사진 원본은 저장소에 포함되지 않습니다. 모델 라이선스는 공개된 조건을 따릅니다 —
+SDXL은 CreativeML Open RAIL++-M, ControlNet 가중치는 해당 저장소의 조건입니다.

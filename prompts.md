@@ -121,12 +121,13 @@ it is narrower than "never describe the pose":
   information. It cannot say which way the torso leans, what the hands are touching, or where the
   body's weight sits. A1's clauses supply exactly that for `pose_01`, and the depth ControlNet
   reinforces it.
-- **A posture clause that contradicts the hint is dropped, not blended.** Measured: A1 sent
-  unchanged to the standing `pose_02` produced a standing figure with no stool at all, at 0.0098
-  mean joint error - no worse than `PROMPT_B` on the same hint (0.0113). The skeleton wins the
-  contradiction outright. An earlier draft that said "standing" over a seated hint did grow extra
-  limbs, so this is not a guarantee at every scale, but at the settings above the failure mode is
-  omission rather than duplication.
+- **A posture clause that contradicts the hint is dropped, not blended.** A1 sent unchanged to the
+  standing `pose_02` produces a standing figure with no stool at all, and scores no worse than
+  `PROMPT_B` on the same hint. The skeleton wins the contradiction outright. The notebook re-measures
+  this every run as **diagnostic 1**, so the figures quoted in section 7 come from the same run as
+  everything else. An earlier draft that said "standing" over a seated hint did grow extra limbs, so
+  this is not a guarantee at every scale, but at the settings above the failure mode is omission
+  rather than duplication.
 - **The demonstration still needs a pose-free prompt somewhere.** If every prompt described the
   posture, a reader could not tell whether the pose came from ControlNet or from the text.
   `PROMPT_B` is that control: it names no posture and still reproduces both references.
@@ -143,14 +144,17 @@ subject, wardrobe, setting, light and medium.
   decided it, not length.
 - **Not every concrete clause survives either.** `cropped jacket` appears in both A1 and `PROMPT_B`
   and was not honoured in any generated image - the jacket comes out hip length every time, across
-  different hints and different prompts. Garment cut is not reliably controllable here.
+  different hints and different prompts. Garment cut is not reliably controllable here. *This is an
+  eye judgement, not a measurement:* `pose_fidelity()` compares twelve limb joint coordinates and
+  has no view of hem length, fingers or faces.
 - **The negative prompt suppresses, it does not guarantee.** `text` and `watermark` are both in it,
-  and one background still came back carrying garbled lettering on a wall.
+  and one background still came back carrying garbled lettering on a wall. Also an eye judgement.
 - **Two conditioning scales, not one.** Pose is held at 0.8 rather than 1.0 because the depth map
-  already pins the limbs; giving pose full weight on top of depth stiffens the body. Measured on
-  `pose_01`: pose 0.8 with depth 0.6 gave 0.013 mean joint error, against 0.030 for pose alone at
-  1.0. On a single-ControlNet pipeline the earlier finding still holds - there, 0.8 let a folded knee
-  land 0.45 of the frame from the hint and 1.0 was required.
+  already pins the limbs; giving pose full weight on top of depth stiffens the body. The notebook
+  re-measures this every run as **diagnostic 2**: the same prompt, hint and seed at `pose_scale=1.0,
+  depth_scale=0.0` against the defaults. On a single-ControlNet pipeline the opposite held - there,
+  0.8 let a folded knee land 0.45 of the frame from the hint and 1.0 was required. That figure comes
+  from a configuration this notebook no longer runs and is not comparable with the current numbers.
 - Keep the negative prompt identical across a comparison, otherwise it stops being a
   single-variable experiment.
 

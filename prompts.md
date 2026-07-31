@@ -66,7 +66,7 @@ Pose hint, seed and all sampler settings fixed. Only the prompt changes.
 A1 - the assignment's step 1:
 
 ```
-A beautiful young African woman, short natural hair, small gold hoop earrings, wearing a flowing bohemian maxi dress in deep teal with gold embroidery, in a sunlit concrete gallery with tall arched windows and a polished terrazzo floor, warm late-afternoon light raking from the left, 85mm lens at f/2, editorial fashion photograph, fine skin texture
+A beautiful young African woman, short natural hair, small gold hoop earrings, wearing a short bohemian dress in deep teal with gold embroidery, bare legs and flat leather sandals, in a sunlit concrete gallery with tall arched windows, warm late-afternoon light raking from the left, 85mm lens at f/2, editorial fashion photograph, fine skin texture
 ```
 
 A2 - the harder variation:
@@ -95,6 +95,14 @@ Neither prompt contains a posture word, and that is a requirement rather than a 
 
 Posture is supplied by the skeleton, and measured: at conditioning scale 1.0 the generated pose sits
 within 0.031 mean joint error of the hint. The prompt's job is subject, wardrobe, setting and light.
+
+The garment was changed after the first full run. A floor-length maxi dress covered the legs
+completely, which broke two things at once: the brief's step 1 asks for a *different person in the
+same pose*, and a pose whose distinctiveness lives in the legs cannot be verified if the legs are not
+visible. It also degraded the fidelity metric, because the ankle keypoints had to be guessed. The
+evidence was a clean A/B: the same hint and the same seed scored 0.046 with the ink-drawing prompt,
+which showed the pose plainly, and 0.098 with the maxi dress. `bare legs and flat leather sandals`
+now makes both the pose and the measurement legible.
 
 Both prompts spend their tokens on things the model can draw. `85mm lens at f/2`,
 `warm late-afternoon light raking from the left` and `polished terrazzo floor` are concrete;
@@ -134,7 +142,7 @@ Prompt, seed and all sampler settings fixed. Only the pose hint changes. The pro
 so this is the assignment's step 2: the same words, a different pose photo.
 
 ```
-A beautiful young African woman, short natural hair, small gold hoop earrings, wearing a flowing bohemian maxi dress in deep teal with gold embroidery, in a sunlit concrete gallery with tall arched windows and a polished terrazzo floor, warm late-afternoon light raking from the left, 85mm lens at f/2, editorial fashion photograph, fine skin texture
+A beautiful young African woman, short natural hair, small gold hoop earrings, wearing a short bohemian dress in deep teal with gold embroidery, bare legs and flat leather sandals, in a sunlit concrete gallery with tall arched windows, warm late-afternoon light raking from the left, 85mm lens at f/2, editorial fashion photograph, fine skin texture
 ```
 
 | ID | Pose | Seed | Output file |

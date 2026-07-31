@@ -66,7 +66,7 @@ Pose hint, seed and all sampler settings fixed. Only the prompt changes.
 A1 - the assignment's step 1:
 
 ```
-A young African woman, short natural hair, small gold hoop earrings, wearing a tailored ivory linen suit with rolled sleeves, in a sunlit concrete gallery with tall arched windows and a polished terrazzo floor, warm late-afternoon light raking from the left, 85mm lens at f/2, editorial fashion photograph, fine skin texture
+A beautiful young African woman, short natural hair, small gold hoop earrings, wearing a flowing bohemian maxi dress in deep teal with gold embroidery, in a sunlit concrete gallery with tall arched windows and a polished terrazzo floor, warm late-afternoon light raking from the left, 85mm lens at f/2, editorial fashion photograph, fine skin texture
 ```
 
 A2 - the harder variation:
@@ -80,9 +80,20 @@ photography altogether, and moving away from photorealism is where pose adherenc
 given conditioning scale - so A2 is the informative case for "which change does the tool follow less
 well".
 
-Neither prompt contains a posture word. The skeleton supplies posture; a prompt that contradicts it
-produces doubled limbs. A1 in particular is reused verbatim over a standing hint in experiment B, so
-it has to stay posture-neutral.
+### Why no prompt describes the pose
+
+Neither prompt contains a posture word, and that is a requirement rather than a style choice.
+
+1. **It is what makes the demonstration valid.** If A1 said "seated on a stool with one leg extended",
+   a reader could not tell whether the pose in `output_01.png` came from ControlNet or from the text.
+   Leaving posture out of the prompt is precisely what proves the skeleton did the work.
+2. **A contradicting posture word doubles limbs.** An early draft of A1 said "standing" over a seated
+   hint and the output grew extra limbs. A word that *agrees* with the hint is harmless - A2 says
+   "sitting" and is only ever used over the seated hint - but a word that disagrees is not.
+3. **A1 is reused verbatim over a standing hint in step 2b.** Any posture in it would fight `pose_02`.
+
+Posture is supplied by the skeleton, and measured: at conditioning scale 1.0 the generated pose sits
+within 0.031 mean joint error of the hint. The prompt's job is subject, wardrobe, setting and light.
 
 Both prompts spend their tokens on things the model can draw. `85mm lens at f/2`,
 `warm late-afternoon light raking from the left` and `polished terrazzo floor` are concrete;
@@ -95,10 +106,10 @@ an abstract noun) was ignored almost entirely. Concreteness decided it, not leng
 
 Each SDXL text encoder truncates at 77 tokens and `diffusers` does it silently. A first draft of A1
 ran to 84 tokens, which would have dropped `85mm lens at f/2`, `editorial fashion photograph` and
-`fine skin texture` - the last clauses, and three of the most useful. It was trimmed to 71 by
-removing `in her late twenties` (redundant next to "young") and a second garment layer.
+`fine skin texture` - the last clauses, and three of the most useful. It was trimmed by removing `in her late twenties`
+(redundant next to "young") and a second garment layer; A1 now sits at 75.
 
-Current counts: **A1 71/77, A2 65/77, negative prompt 35/77.** Check any edit against the tokenizer
+Current counts: **A1 75/77, A2 65/77, negative prompt 35/77.** Check any edit against the tokenizer
 before running it; a prompt that silently loses its tail is indistinguishable from a prompt that was
 simply ignored.
 
@@ -108,7 +119,7 @@ Prompt, seed and all sampler settings fixed. Only the pose hint changes. The pro
 so this is the assignment's step 2: the same words, a different pose photo.
 
 ```
-A young African woman, short natural hair, small gold hoop earrings, wearing a tailored ivory linen suit with rolled sleeves, in a sunlit concrete gallery with tall arched windows and a polished terrazzo floor, warm late-afternoon light raking from the left, 85mm lens at f/2, editorial fashion photograph, fine skin texture
+A beautiful young African woman, short natural hair, small gold hoop earrings, wearing a flowing bohemian maxi dress in deep teal with gold embroidery, in a sunlit concrete gallery with tall arched windows and a polished terrazzo floor, warm late-afternoon light raking from the left, 85mm lens at f/2, editorial fashion photograph, fine skin texture
 ```
 
 | ID | Pose | Seed | Output file |

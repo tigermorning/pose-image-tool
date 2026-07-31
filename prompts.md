@@ -60,8 +60,8 @@ Pose hint, seed and all sampler settings fixed. Only the prompt changes.
 
 | ID | Pose | Seed | Tests | Output file |
 |---|---|---|---|---|
-| A1 | `pose_01.png` | 1234 | a different person in the reference's pose | `exp_a_1.png` (also copied to `output_01.png`) |
-| A2 | `pose_01.png` | 1234 | a different subject **and** a different medium | `exp_a_2.png` |
+| A1 | `pose_01.png` | 1234 | a different person in the reference's pose | `output_01.png` |
+| A2 | `pose_01.png` | 1234 | a different subject **and** a different medium | `output_01_alt_prompt.png` |
 
 A1 - the assignment's step 1:
 
@@ -139,12 +139,14 @@ A beautiful young African woman, short natural hair, small gold hoop earrings, w
 
 | ID | Pose | Seed | Output file |
 |---|---|---|---|
-| B1 | `pose_01.png` - seated on a stool | 777 | `exp_b_01.png` |
-| B2 | `pose_02.png` - standing, fists raised | 777 | `exp_b_02.png` (also copied to `output_02.png`) |
+| B1 | `pose_01.png` - seated on a stool | 1234 | `output_01.png` - identical to A1, not regenerated |
+| B2 | `pose_02.png` - standing, fists raised | 1234 | `output_02.png` |
 
-`output_01.png` and `output_02.png` are the two halves of the assignment. Same prompt, same seed, one
-seated woman and one standing woman - and the only thing that differed was which photograph the
-skeleton came from.
+Both experiments share one seed, 1234. That makes B1 byte-identical to A1, so it is not generated
+twice - `output_01.png` serves as both step 1's result and the `pose_01` arm of step 2b. The whole
+run is therefore three generated images, and `output_01.png` against `output_02.png` is a genuine
+single-variable comparison: same prompt, same seed, same sampler settings, and the only difference
+is which photograph the skeleton came from.
 
 ## Prompt-writing notes
 

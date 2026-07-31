@@ -29,7 +29,7 @@ Prompts, seeds and every setting are in [`prompts.md`](prompts.md).
 |---|---|
 | `pose_tool.ipynb` | The tool. Install, load models, extract pose, generate, run experiments, save results, findings. |
 | `prompts.md` | Every prompt, seed and setting used, so each result is reproducible. |
-| `samples/` | Pose hints (`pose_NN.png`), the canonical outputs (`output_NN.png`), and every experiment image (`exp_a_*`, `exp_b_*`). |
+| `samples/` | Pose hints and generated results - five files, listed below. |
 
 ## Description
 
@@ -85,14 +85,17 @@ Section 3's preview and its numeric validation are not decoration. A hint with a
 
 Section 6 downloads `samples.zip`. Unzip it into `samples/` and commit. Canonical filenames:
 
-| File | Content |
-|---|---|
-| `samples/pose_01.png` | skeleton from the first reference |
-| `samples/output_01.png` | `pose_01` + prompt A1 (bohemian dress, neon street) |
-| `samples/pose_02.png` | skeleton from the second reference |
-| `samples/output_02.png` | `pose_02` + prompt B (neon-armour warrior) - the failure case |
+| File | Content | Assignment step |
+|---|---|---|
+| `samples/pose_01.png` | skeleton extracted from the reference photo | 1 |
+| `samples/output_01.png` | that skeleton + the African-woman prompt | 1, and the `pose_01` arm of 2b |
+| `samples/output_01_alt_prompt.png` | same skeleton, the ink-drawing prompt | 2a |
+| `samples/pose_02.png` | skeleton from the second pose photo | 2b |
+| `samples/output_02.png` | `pose_02` + the *same* prompt and seed as `output_01.png` | 2b |
 
-The zip also contains the experiment images under their own names (`exp_a_*`, `exp_b_*`).
+Five files, and every one carries something the others do not. Both experiments use seed 1234, which
+makes step 2b's `pose_01` arm identical to step 1's result, so it is not stored twice - three images
+are generated in total.
 
 ### Tuning
 

@@ -88,8 +88,9 @@ Neither prompt contains a posture word, and that is a requirement rather than a 
    a reader could not tell whether the pose in `output_01.png` came from ControlNet or from the text.
    Leaving posture out of the prompt is precisely what proves the skeleton did the work.
 2. **A contradicting posture word doubles limbs.** An early draft of A1 said "standing" over a seated
-   hint and the output grew extra limbs. A word that *agrees* with the hint is harmless - A2 says
-   "sitting" and is only ever used over the seated hint - but a word that disagrees is not.
+   hint and the output grew extra limbs. A word that merely *agrees* with the hint turned out to be
+   harmless, but relying on that is fragile - the hint can change later, as it does in step 2b - so
+   neither prompt here contains one at all.
 3. **A1 is reused verbatim over a standing hint in step 2b.** Any posture in it would fight `pose_02`.
 
 Posture is supplied by the skeleton, and measured: at conditioning scale 1.0 the generated pose sits
@@ -112,6 +113,20 @@ ran to 84 tokens, which would have dropped `85mm lens at f/2`, `editorial fashio
 Current counts: **A1 75/77, A2 65/77, negative prompt 35/77.** Check any edit against the tokenizer
 before running it; a prompt that silently loses its tail is indistinguishable from a prompt that was
 simply ignored.
+
+
+### Verified, not assumed
+
+Scanned straight out of `pose_tool.ipynb` rather than from memory:
+
+| Prompt | Tokens | Posture words | Scope |
+|---|---|---|---|
+| A1 (step 1, and step 2b) | 75/77 | none | person, wardrobe, setting, light, lens |
+| A2 (step 2a) | 65/77 | none | subject, wardrobe, medium, pigments, paper |
+| negative | 35/77 | none | defects to suppress |
+
+`PROMPT_B` is byte-identical to A1, so step 2b really does hold the prompt constant. Re-run the scan
+after editing any prompt: a posture word that slips in is invisible until the limbs double.
 
 ## Experiment B - same prompt, different poses
 

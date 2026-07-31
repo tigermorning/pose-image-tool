@@ -14,3 +14,6 @@ __pycache__/
 
 # Local working note, not part of the deliverable.
 COLAB-*.md
+
+# Prompt-variant trials, not part of the deliverable.
+experiments/

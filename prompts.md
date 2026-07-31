@@ -46,9 +46,10 @@ The pair maximises pose contrast while keeping both hints unambiguous. They diff
 standing with the feet apart), so experiment B varies posture as completely as two references can
 while every limb chain stays closed and no limb overlaps another in 2D.
 
-`pose_02`'s closed fists are a deliberate choice. Fingers were the one defect no setting in this
-notebook fixed, and a closed fist is a shape SDXL renders far more reliably than a spread hand, so
-this reference sidesteps the known failure rather than walking into it.
+`pose_02`'s closed fists were chosen to sidestep the finger problem - a closed fist is a shape SDXL
+renders more reliably than a spread hand. **That did not work.** The hint's fists came back as open
+hands with malformed fingers, so the mitigation failed and the fingers are wrong on both references.
+The cause is size rather than shape: a hand spans roughly 54 px in this framing.
 
 Six candidates were checked; four were rejected by the same numeric test and kept out of the run:
 
@@ -69,7 +70,7 @@ Pose hint, seed and all sampler settings fixed. Only the prompt changes.
 
 | ID | Pose | Seed | Tests | Output file |
 |---|---|---|---|---|
-| A1 | `pose_01.png` | 1234 | a different person in the reference's pose | `output_01.png` |
+| A1 | `pose_01.png` | 1234 | a different person in the reference's pose - **step 1** | `output_01.png` |
 | A2 | `pose_01.png` | 1234 | a different subject **and** a different medium | `output_01_alt_prompt.png` |
 
 A1 - the assignment's step 1:
@@ -91,30 +92,27 @@ well".
 
 ## Experiment B - same prompt, different poses
 
-Prompt, seed and all sampler settings fixed. Only the pose hint changes.
-
-```
-A beautiful young African woman, wide dark trousers and a cropped jacket, sunlit concrete gallery, 85mm lens at f/2, candid editorial photograph, natural skin with visible pores
-```
+Prompt, seed and all sampler settings fixed. Only the pose hint changes. The prompt is **A1, byte
+for byte** - the assignment's step 2 asks for the same prompt over a different pose photo, and that
+is what this sends.
 
 | ID | Pose | Seed | Output file |
 |---|---|---|---|
-| B1 | `pose_01.png` - seated on a stool | 1234 | `output_02_pose01.png` |
+| B1 | `pose_01.png` - seated on a stool | 1234 | `output_01.png` - this *is* step 1's result, not regenerated |
 | B2 | `pose_02.png` - standing, fists raised | 1234 | `output_02.png` |
 
-`PROMPT_B` is **A1 with its three posture clauses deleted** and nothing else changed - same subject,
-wardrobe, setting, lens and photographic register, byte-identical from `wide dark trousers` onward.
-It is not A1 verbatim, and the reason is that A1 describes `pose_01` specifically: `perched on the
-edge of a metal stool`, `leaning forward with her weight on her arm`, `one hand gripping the seat
-between her knees`. Those clauses agree with the seated hint and contradict the standing one, so
-sending A1 unchanged to both references would have varied two things at once.
+A1 describes `pose_01` specifically (`perched on the edge of a metal stool`, and so on), so sending
+it unchanged to a standing reference contradicts the hint. That was measured rather than assumed:
+A1 unchanged over `pose_02` scored 0.008 against 0.010 for the same prompt with its posture clauses
+stripped out, and no stool appeared in either. **A posture clause that fights the hint is discarded,
+not blended**, so keeping it costs nothing and keeps the prompt byte-identical across both hints.
 
-Both B images share `PROMPT_B`, so B1 against B2 is a genuine single-variable comparison: the only
-difference between the two files is which photograph the skeleton came from.
+Diagnostic 1 in the notebook re-runs the stripped version every time, so the claim is checked in the
+run rather than carried in from here.
 
 ## Posture words in a prompt
 
-A1 contains posture clauses; `PROMPT_B` does not. That difference is deliberate, and the rule behind
+A1 contains posture clauses; the pose-free control does not. That difference is deliberate, and the rule behind
 it is narrower than "never describe the pose":
 
 - **A posture clause that agrees with the hint is useful.** A skeleton has no depth and no contact
@@ -122,15 +120,15 @@ it is narrower than "never describe the pose":
   body's weight sits. A1's clauses supply exactly that for `pose_01`, and the depth ControlNet
   reinforces it.
 - **A posture clause that contradicts the hint is dropped, not blended.** A1 sent unchanged to the
-  standing `pose_02` produces a standing figure with no stool at all, and scores no worse than
-  `PROMPT_B` on the same hint. The skeleton wins the contradiction outright. The notebook re-measures
+  standing `pose_02` produces a standing figure with no stool at all, and scores no worse than the
+  pose-free control on the same hint. The skeleton wins the contradiction outright. The notebook re-measures
   this every run as **diagnostic 1**, so the figures quoted in section 7 come from the same run as
   everything else. An earlier draft that said "standing" over a seated hint did grow extra limbs, so
   this is not a guarantee at every scale, but at the settings above the failure mode is omission
   rather than duplication.
 - **The demonstration still needs a pose-free prompt somewhere.** If every prompt described the
   posture, a reader could not tell whether the pose came from ControlNet or from the text.
-  `PROMPT_B` is that control: it names no posture and still reproduces both references.
+  Diagnostic 1's prompt is that control: it names no posture and still reproduces the reference.
 
 Posture is supplied by the skeleton and measured, not asserted. The prompt's remaining job is
 subject, wardrobe, setting, light and medium.
@@ -142,7 +140,7 @@ subject, wardrobe, setting, light and medium.
   colourful neon lights` (6 tokens, a material plus an optical effect) was rendered faithfully, while
   `futuristic laundromat` (3 tokens, an abstract noun) was ignored almost entirely. Concreteness
   decided it, not length.
-- **Not every concrete clause survives either.** `cropped jacket` appears in both A1 and `PROMPT_B`
+- **Not every concrete clause survives either.** `cropped jacket` appears in both A1 and the pose-free control
   and was not honoured in any generated image - the jacket comes out hip length every time, across
   different hints and different prompts. Garment cut is not reliably controllable here. *This is an
   eye judgement, not a measurement:* `pose_fidelity()` compares twelve limb joint coordinates and
@@ -167,9 +165,9 @@ Counts scanned with `CLIPTokenizer` against the text currently in the notebook:
 
 | Prompt | Tokens | Posture clauses | Scope |
 |---|---|---|---|
-| A1 (step 1) | 66/77 | 3, all agreeing with `pose_01` | person, posture, wardrobe, setting, lens |
+| A1 (steps 1 and 2b) | 66/77 | 3, agreeing with `pose_01`, ignored on `pose_02` | person, posture, wardrobe, setting, lens |
 | A2 (step 2a) | 65/77 | 3, same clauses in the drawing's register | subject, posture, wardrobe, medium, paper |
-| `PROMPT_B` (step 2b) | 40/77 | none | person, wardrobe, setting, lens |
+| pose-free control (diagnostic 1) | 40/77 | none | person, wardrobe, setting, lens |
 | negative | 44/77 | none | defects to suppress |
 
 Re-run the scan after editing any prompt.

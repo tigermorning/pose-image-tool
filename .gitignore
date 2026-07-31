@@ -11,3 +11,6 @@ samples.zip
 .ipynb_checkpoints/
 __pycache__/
 *.pyc
+
+# Local working note, not part of the deliverable.
+COLAB-*.md

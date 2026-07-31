@@ -1,26 +1,35 @@
 # Prompts & Settings
 
 Every generation in `pose_tool.ipynb` is recorded here so any result can be reproduced exactly.
+Prompt bodies below are copied out of the notebook, not from memory.
 
 ## Shared settings
 
 | Setting | Value |
 |---|---|
-| Base model | `stabilityai/stable-diffusion-xl-base-1.0` |
-| ControlNet | `thibaud/controlnet-openpose-sdxl-1.0` |
+| Base model | `SG161222/RealVisXL_V5.0` (photoreal SDXL fine-tune) |
+| ControlNet 1 - pose | `thibaud/controlnet-openpose-sdxl-1.0` |
+| ControlNet 2 - depth | `diffusers/controlnet-depth-sdxl-1.0` |
 | VAE | `madebyollin/sdxl-vae-fp16-fix` |
 | Pose annotator | `controlnet_aux.OpenposeDetector` (`lllyasviel/Annotators`), body + hands, no face |
+| Depth annotator | `controlnet_aux.MidasDetector` (`lllyasviel/Annotators`) |
 | Resolution | 832 x 1216, references letterboxed (not cropped) to that ratio |
 | Steps | 28 |
 | Guidance scale | 5.0 |
-| Conditioning scale | 1.0 (see the note below) |
+| Conditioning scale | **pose 0.8, depth 0.6** (see the note below) |
+| Seed | 1234 for every image |
 | Precision | fp16 |
 
 Negative prompt, used for every image:
 
 ```
-lowres, blurry, deformed hands, extra limbs, extra fingers, watermark, text, jpeg artifacts
+doll, mannequin, plastic skin, waxy, airbrushed, lowres, blurry, deformed hands, extra fingers, extra limbs, three legs, duplicated limbs, fused limbs, watermark, text
 ```
+
+The base is a photoreal fine-tune rather than SDXL base 1.0. On this reference, base 1.0 rendered
+faces and skin that read as a mannequin, and no prompt or sampler setting fixed it - it is the
+checkpoint's own character. Swapping the checkpoint did fix it. The first five negative terms
+(`doll, mannequin, plastic skin, waxy, airbrushed`) are what remains of that fight.
 
 ## Pose hints
 
@@ -66,13 +75,13 @@ Pose hint, seed and all sampler settings fixed. Only the prompt changes.
 A1 - the assignment's step 1:
 
 ```
-A beautiful young African woman, short natural hair, small gold hoop earrings, wearing a short bohemian dress in deep teal with gold embroidery, bare legs and flat leather sandals, in a sunlit concrete gallery with tall arched windows, warm late-afternoon light raking from the left, 85mm lens at f/2, editorial fashion photograph, fine skin texture
+A beautiful young African woman perched on the edge of a metal stool, leaning forward with her weight on her arm, one hand gripping the seat between her knees, wide dark trousers and a cropped jacket, sunlit concrete gallery, 85mm lens at f/2, candid editorial photograph, natural skin with visible pores
 ```
 
 A2 - the harder variation:
 
 ```
-An ink and watercolour drawing of a travelling puppeteer in a patched wool coat and worn leather boots, a canvas satchel at the hip, on cream paper with visible fibres, loose confident brush strokes, muted earth pigments of ochre and burnt umber, ink bleeding at the outlines, wide untouched margins
+An ink and watercolour drawing of a travelling puppeteer perched on the edge of a wooden stool, leaning forward with his weight on his arm, one hand gripping the seat between his knees, patched wool coat and worn boots, cream paper with visible fibres, loose brush strokes, ochre and burnt umber
 ```
 
 The two prompts probe different axes. A1 stays photographic and changes who the person is. A2 leaves
@@ -80,93 +89,83 @@ photography altogether, and moving away from photorealism is where pose adherenc
 given conditioning scale - so A2 is the informative case for "which change does the tool follow less
 well".
 
-### Why no prompt describes the pose
-
-Neither prompt contains a posture word, and that is a requirement rather than a style choice.
-
-1. **It is what makes the demonstration valid.** If A1 said "seated on a stool with one leg extended",
-   a reader could not tell whether the pose in `output_01.png` came from ControlNet or from the text.
-   Leaving posture out of the prompt is precisely what proves the skeleton did the work.
-2. **A contradicting posture word doubles limbs.** An early draft of A1 said "standing" over a seated
-   hint and the output grew extra limbs. A word that merely *agrees* with the hint turned out to be
-   harmless, but relying on that is fragile - the hint can change later, as it does in step 2b - so
-   neither prompt here contains one at all.
-3. **A1 is reused verbatim over a standing hint in step 2b.** Any posture in it would fight `pose_02`.
-
-Posture is supplied by the skeleton, and measured: at conditioning scale 1.0 the generated pose sits
-within 0.031 mean joint error of the hint. The prompt's job is subject, wardrobe, setting and light.
-
-The garment was changed after the first full run. A floor-length maxi dress covered the legs
-completely, which broke two things at once: the brief's step 1 asks for a *different person in the
-same pose*, and a pose whose distinctiveness lives in the legs cannot be verified if the legs are not
-visible. It also degraded the fidelity metric, because the ankle keypoints had to be guessed. The
-evidence was a clean A/B: the same hint and the same seed scored 0.046 with the ink-drawing prompt,
-which showed the pose plainly, and 0.098 with the maxi dress. `bare legs and flat leather sandals`
-now makes both the pose and the measurement legible.
-
-Both prompts spend their tokens on things the model can draw. `85mm lens at f/2`,
-`warm late-afternoon light raking from the left` and `polished terrazzo floor` are concrete;
-`professional photography` and `ultra-realistic` are not, and were dropped. This follows the one
-thing measured on the earlier prompt pair: `wet asphalt reflecting colourful neon lights` (6 tokens,
-a material plus an optical effect) was rendered faithfully, while `futuristic laundromat` (3 tokens,
-an abstract noun) was ignored almost entirely. Concreteness decided it, not length.
-
-### The 77-token ceiling is real
-
-Each SDXL text encoder truncates at 77 tokens and `diffusers` does it silently. A first draft of A1
-ran to 84 tokens, which would have dropped `85mm lens at f/2`, `editorial fashion photograph` and
-`fine skin texture` - the last clauses, and three of the most useful. It was trimmed by removing `in her late twenties`
-(redundant next to "young") and a second garment layer; A1 now sits at 75.
-
-Current counts: **A1 75/77, A2 65/77, negative prompt 35/77.** Check any edit against the tokenizer
-before running it; a prompt that silently loses its tail is indistinguishable from a prompt that was
-simply ignored.
-
-
-### Verified, not assumed
-
-Scanned straight out of `pose_tool.ipynb` rather than from memory:
-
-| Prompt | Tokens | Posture words | Scope |
-|---|---|---|---|
-| A1 (step 1, and step 2b) | 75/77 | none | person, wardrobe, setting, light, lens |
-| A2 (step 2a) | 65/77 | none | subject, wardrobe, medium, pigments, paper |
-| negative | 35/77 | none | defects to suppress |
-
-`PROMPT_B` is byte-identical to A1, so step 2b really does hold the prompt constant. Re-run the scan
-after editing any prompt: a posture word that slips in is invisible until the limbs double.
-
 ## Experiment B - same prompt, different poses
 
-Prompt, seed and all sampler settings fixed. Only the pose hint changes. The prompt is A1 verbatim,
-so this is the assignment's step 2: the same words, a different pose photo.
+Prompt, seed and all sampler settings fixed. Only the pose hint changes.
 
 ```
-A beautiful young African woman, short natural hair, small gold hoop earrings, wearing a short bohemian dress in deep teal with gold embroidery, bare legs and flat leather sandals, in a sunlit concrete gallery with tall arched windows, warm late-afternoon light raking from the left, 85mm lens at f/2, editorial fashion photograph, fine skin texture
+A beautiful young African woman, wide dark trousers and a cropped jacket, sunlit concrete gallery, 85mm lens at f/2, candid editorial photograph, natural skin with visible pores
 ```
 
 | ID | Pose | Seed | Output file |
 |---|---|---|---|
-| B1 | `pose_01.png` - seated on a stool | 1234 | `output_01.png` - identical to A1, not regenerated |
+| B1 | `pose_01.png` - seated on a stool | 1234 | `output_02_pose01.png` |
 | B2 | `pose_02.png` - standing, fists raised | 1234 | `output_02.png` |
 
-Both experiments share one seed, 1234. That makes B1 byte-identical to A1, so it is not generated
-twice - `output_01.png` serves as both step 1's result and the `pose_01` arm of step 2b. The whole
-run is therefore three generated images, and `output_01.png` against `output_02.png` is a genuine
-single-variable comparison: same prompt, same seed, same sampler settings, and the only difference
-is which photograph the skeleton came from.
+`PROMPT_B` is **A1 with its three posture clauses deleted** and nothing else changed - same subject,
+wardrobe, setting, lens and photographic register, byte-identical from `wide dark trousers` onward.
+It is not A1 verbatim, and the reason is that A1 describes `pose_01` specifically: `perched on the
+edge of a metal stool`, `leaning forward with her weight on her arm`, `one hand gripping the seat
+between her knees`. Those clauses agree with the seated hint and contradict the standing one, so
+sending A1 unchanged to both references would have varied two things at once.
+
+Both B images share `PROMPT_B`, so B1 against B2 is a genuine single-variable comparison: the only
+difference between the two files is which photograph the skeleton came from.
+
+## Posture words in a prompt
+
+A1 contains posture clauses; `PROMPT_B` does not. That difference is deliberate, and the rule behind
+it is narrower than "never describe the pose":
+
+- **A posture clause that agrees with the hint is useful.** A skeleton has no depth and no contact
+  information. It cannot say which way the torso leans, what the hands are touching, or where the
+  body's weight sits. A1's clauses supply exactly that for `pose_01`, and the depth ControlNet
+  reinforces it.
+- **A posture clause that contradicts the hint is dropped, not blended.** Measured: A1 sent
+  unchanged to the standing `pose_02` produced a standing figure with no stool at all, at 0.0098
+  mean joint error - no worse than `PROMPT_B` on the same hint (0.0113). The skeleton wins the
+  contradiction outright. An earlier draft that said "standing" over a seated hint did grow extra
+  limbs, so this is not a guarantee at every scale, but at the settings above the failure mode is
+  omission rather than duplication.
+- **The demonstration still needs a pose-free prompt somewhere.** If every prompt described the
+  posture, a reader could not tell whether the pose came from ControlNet or from the text.
+  `PROMPT_B` is that control: it names no posture and still reproduces both references.
+
+Posture is supplied by the skeleton and measured, not asserted. The prompt's remaining job is
+subject, wardrobe, setting, light and medium.
 
 ## Prompt-writing notes
 
-- **Do not describe a posture that fights the hint.** The skeleton already supplies the pose.
-  "arms raised" over a seated skeleton produces doubled limbs. A posture word that matches the
-  skeleton (here, "seated" / "sitting") is fine and can even help.
-- **Do describe subject, wardrobe, setting, lighting and medium.** Those are exactly the
-  dimensions the skeleton leaves free.
-- **Conditioning scale 1.0, not 0.8.** Measured by re-detecting the pose in the generated image
-  and comparing it joint by joint with the hint: at 0.8 the folded knee landed 0.45 of the frame
-  away from the hint (mean error 0.099), at 1.0 every joint is within 0.07 (mean 0.031). A folded
-  or foreshortened limb is where a low scale fails first, and it fails without looking obviously
-  wrong. The cost of 1.0 is slightly stiffer material rendering.
+- **Concrete beats abstract.** `85mm lens at f/2` and `natural skin with visible pores` are rendered;
+  bare abstract nouns tend to be ignored. Measured on an earlier prompt pair: `wet asphalt reflecting
+  colourful neon lights` (6 tokens, a material plus an optical effect) was rendered faithfully, while
+  `futuristic laundromat` (3 tokens, an abstract noun) was ignored almost entirely. Concreteness
+  decided it, not length.
+- **Not every concrete clause survives either.** `cropped jacket` appears in both A1 and `PROMPT_B`
+  and was not honoured in any generated image - the jacket comes out hip length every time, across
+  different hints and different prompts. Garment cut is not reliably controllable here.
+- **The negative prompt suppresses, it does not guarantee.** `text` and `watermark` are both in it,
+  and one background still came back carrying garbled lettering on a wall.
+- **Two conditioning scales, not one.** Pose is held at 0.8 rather than 1.0 because the depth map
+  already pins the limbs; giving pose full weight on top of depth stiffens the body. Measured on
+  `pose_01`: pose 0.8 with depth 0.6 gave 0.013 mean joint error, against 0.030 for pose alone at
+  1.0. On a single-ControlNet pipeline the earlier finding still holds - there, 0.8 let a folded knee
+  land 0.45 of the frame from the hint and 1.0 was required.
 - Keep the negative prompt identical across a comparison, otherwise it stops being a
   single-variable experiment.
+
+## The 77-token ceiling is real
+
+Each SDXL text encoder truncates at 77 tokens and `diffusers` does it silently, from the tail. A
+prompt that quietly loses its last clauses is indistinguishable from a prompt that was ignored.
+
+Counts scanned with `CLIPTokenizer` against the text currently in the notebook:
+
+| Prompt | Tokens | Posture clauses | Scope |
+|---|---|---|---|
+| A1 (step 1) | 66/77 | 3, all agreeing with `pose_01` | person, posture, wardrobe, setting, lens |
+| A2 (step 2a) | 65/77 | 3, same clauses in the drawing's register | subject, posture, wardrobe, medium, paper |
+| `PROMPT_B` (step 2b) | 40/77 | none | person, wardrobe, setting, lens |
+| negative | 44/77 | none | defects to suppress |
+
+Re-run the scan after editing any prompt.
